@@ -27,6 +27,8 @@ Python CI, CodeQL/Trivy, approval, merge and review automation call pinned workf
 from [venus-os-ci-toolkit](https://github.com/victron-venus/venus-os-ci-toolkit).
 Repository-specific source checks and wake-classifier parity are also required by
 `CI gate`. A passing source check cannot substitute for a skipped parity test.
+The shared dependency review reads `.github/dependency-review-config.yml` and
+rejects newly introduced high/critical dependency vulnerabilities.
 
 The parity job constructs a synthetic model and runs the pinned TECHO5 interpreter.
 It needs no household credentials, recordings or personalized model weights. Public
