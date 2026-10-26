@@ -2,9 +2,11 @@
 
 ## Current connection
 
-The selected Dot runs **TECHO5 v1.0.34** and is paired directly with Home Assistant through its **encrypted ESPHome-native API**. Pairing and both Assist pipeline selections were verified on October 26, 2026. The other Dot remains offline and unchanged. See [pilot status](status.md) for the distinction between installation and end-to-end acceptance.
+The selected Dot runs **TECHO5 v1.0.35** and is paired directly with Home Assistant through its **encrypted ESPHome-native API**. Pairing and both Assist pipeline selections were verified on October 26, 2026. The other Dot remains offline and unchanged. See [pilot status](status.md) for the distinction between installation and end-to-end acceptance.
 
 Before migration, this Dot used emOS/EchoMuse through EchoMuse Controller. The installer preserved its older EchoLocal name and pairing material and now advertises the physical device's factory network identity. That identity is different from the former controller's virtual identity. Reconcile existing HA entries before treating a discovery as a new physical speaker; do not publish either the identifiers or the encryption key.
+
+The [signed v1.0.35 update](updates.md) preserved pairing, both Assist pipelines and the personal model.
 
 ## Pairing and settings
 

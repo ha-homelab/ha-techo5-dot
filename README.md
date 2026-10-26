@@ -10,11 +10,11 @@ This repository records compatibility decisions, private preparation and accepta
 
 ## Where we are
 
-One Dot now runs **TECHO5 v1.0.34, slot a**. The installer reported a healthy boot, its Home Assistant API answered, and native encrypted pairing succeeded. The other Dot is offline and unchanged. A software reboot preserved the healthy slot, native pairing and personal wake-word settings. End-to-end voice/music tests remain pending. See the dated [status](docs/status.md).
+One Dot now runs **TECHO5 v1.0.35, slot b**, following a signed update through Home Assistant. The installer reported a healthy boot, its Home Assistant API answered, and native encrypted pairing succeeded. The other Dot is offline and unchanged. A software reboot preserved the healthy slot, native pairing and personal wake-word settings. End-to-end voice/music tests remain pending. See the dated [status](docs/status.md).
 
 The personal TFLite model has loaded in the openWakeWord engine. Its unique selector label is **«Привет, Мышка (personal)»**; the spoken phrase remains **«Привет, Мышка»**. The verified threshold is **0.5**, with no second wake word. Both Assist pipeline selectors use **Local Russian Home**; BLE proxy and streamed replies are enabled. These settings do not establish acoustic recognition, smooth playback or early audible replies.
 
-The evaluation target is [TECHO5 Dot v1.0.34](https://github.com/HuskerMinion/techo5-dot/releases/tag/dot-v1.0.34), pinned to [`88b2670`](https://github.com/HuskerMinion/techo5-dot/tree/88b26703d5e1a97d5ce0fee90805e8a3dd206a95). Newer `main` is not the pilot baseline. See [upstream-lock.json](upstream-lock.json) for exact source pins.
+The initial installation and classifier-parity baseline is [TECHO5 Dot v1.0.34](https://github.com/HuskerMinion/techo5-dot/releases/tag/dot-v1.0.34), pinned to [`88b2670`](https://github.com/HuskerMinion/techo5-dot/tree/88b26703d5e1a97d5ce0fee90805e8a3dd206a95). See [upstream-lock.json](upstream-lock.json) for those original source pins and [the update record](docs/updates.md) for the current deployed release. Moving upstream `main` is not a deployment pin.
 
 ## Why evaluate it?
 

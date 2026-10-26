@@ -11,6 +11,7 @@ Record observations and timings privately. An unchecked item is pending, not a p
 - [x] Disable the three obsolete voice/BT/scanner entries and verify the pilot Dot's saved Lovelace card uses its available Music Assistant/Sendspin player and native voice controls.
 - [x] Update and validate the pilot's household music script and source-device/satellite routes without changing other endpoints or starting playback.
 - [x] Test a software reboot: healthy slot a, stable daemon, matching boot-image and personal model/sidecar hashes, retained selection/pipelines, reconnected native player/satellite and joined Sendspin client.
+- [x] Apply the signed v1.0.35 update through HA: healthy slot b, previous good slot a retained, official daemon hash matched, personal model and voice settings preserved. See [update details](updates.md).
 - [ ] Test a cold boot after disconnecting and reconnecting power; the software reboot does not cover this case.
 - [ ] Validate «Привет, Мышка» at normal speaking volume, near the device and from its usual seat. Include quiet-room and television negatives.
 - [ ] Check the Action button, physical mute, indicator states and volume controls.

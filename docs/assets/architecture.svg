@@ -4,7 +4,7 @@
   <rect width="1280" height="700" rx="24" fill="#101d31"/>
   <g font-family="Arial">
     <text x="52" y="64" font-size="29" font-weight="700" fill="#f6f8ff">One Dot. A different connection to Home Assistant.</text>
-    <text x="52" y="99" font-size="17" fill="#b8c9dd">Healthy after software reboot · TECHO5 Dot v1.0.34 · Voice and music checks pending</text>
+    <text x="52" y="99" font-size="17" fill="#b8c9dd">Healthy after software reboot · TECHO5 Dot v1.0.35 · Voice and music checks pending</text>
     <rect x="52" y="134" width="1176" height="200" rx="18" fill="#1e2742" stroke="#685d99"/>
     <text x="76" y="168" font-size="16" font-weight="700" fill="#c9baff" letter-spacing="1">BEFORE MIGRATION · OCTOBER 25</text>
     <rect x="80" y="195" width="270" height="108" rx="12" fill="#332d55"/>
@@ -24,7 +24,7 @@
     <text x="76" y="390" font-size="16" font-weight="700" fill="#8df4e4" letter-spacing="1">INSTALLED · PAIRED WITH HOME ASSISTANT</text>
     <rect x="80" y="417" width="270" height="110" rx="12" fill="#1d5157"/>
     <text x="105" y="454" font-size="21" font-weight="700" fill="#ffffff">Echo Dot 2</text>
-    <text x="105" y="484" font-size="17" fill="#cdf6f2">TECHO5 v1.0.34 · slot a</text>
+    <text x="105" y="484" font-size="17" fill="#cdf6f2">TECHO5 v1.0.35 · slot b</text>
     <rect x="369" y="470.5" width="513" height="3" fill="#6ce6e2"/>
     <polygon points="882,465 896,472 882,479" fill="#6ce6e2"/>
     <text x="489" y="452" font-size="18" font-weight="600" fill="#bbfff0">Encrypted ESPHome-native API</text>

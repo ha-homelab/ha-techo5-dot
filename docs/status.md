@@ -1,8 +1,14 @@
 # Pilot status
 
-## October 26, 2026 — installed and paired
+## October 26, 2026 — signed update to v1.0.35
 
-One Echo Dot 2 now runs **TECHO5 v1.0.34, slot a**. The installer completed successfully, reported a healthy boot, and the Home Assistant API answered. Native encrypted ESPHome pairing succeeded. The other Dot remains offline and unchanged.
+The active Dot was updated through Home Assistant to **TECHO5 v1.0.35, slot b**. The release manifest signature and hashes were verified. The installed daemon matches the official binary digest; the personal model and its sidecar retain their previous hashes. Home Assistant reports the current version, no update in progress and unchanged voice, BLE and Sendspin settings. Slot b was committed as good with a healthy boot counter; the previous good v1.0.34 remains in slot a. Automatic future updates remain disabled.
+
+See the [update record](updates.md) for release changes and verification. Voice and music listening tests remain postponed at the user's request.
+
+## October 26, 2026 — initial installation and pairing
+
+One Echo Dot 2 was initially installed with **TECHO5 v1.0.34, slot a**. The installer completed successfully, reported a healthy boot, and the Home Assistant API answered. Native encrypted ESPHome pairing succeeded. The other Dot remains offline and unchanged.
 
 - Both Assist pipeline selectors use **Local Russian Home**, preserving the household conversation policy.
 - The personal OWW TFLite model is selected and loaded in the openWakeWord engine; its live SHA-256 matches the private candidate. The unique selector label is **«Привет, Мышка (personal)»**; the spoken phrase remains **«Привет, Мышка»**. A duplicate label initially selected an older microWakeWord model. The corrected model ID and runtime were checked together.
