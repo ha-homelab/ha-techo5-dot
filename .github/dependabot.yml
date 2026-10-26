@@ -11,6 +11,10 @@ updates:
     directory: /training
     schedule:
       interval: weekly
+    # Keep the documented and CI-tested Python 3.11 environment installable.
+    ignore:
+      - dependency-name: numpy
+        versions: [">=2.5"]
     groups:
       wake-tools:
         patterns: ["*"]
