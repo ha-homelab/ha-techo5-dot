@@ -5,6 +5,15 @@ openWakeWord embeddings and an ONNX classifier. TECHO5 can run openWakeWord too,
 but its on-device classifier format is **TFLite**. Changing the file extension is
 not a conversion.
 
+**October 26 deployment checkpoint:** the converted personal model is selected on
+the pilot Dot and loaded in the openWakeWord engine. Its live file hash matches the
+private candidate. The unique selector label is **«Привет, Мышка (personal)»**;
+the spoken phrase is still **«Привет, Мышка»**. The verified threshold is **0.5**,
+with the secondary wake word set to **None**. A software reboot preserved the
+model and sidecar hashes, selection and threshold; the openWakeWord engine reported
+ready again. Loading the model does not establish near/far recognition or
+false-wake performance. See [pilot status](status.md) and [acceptance](acceptance.md).
+
 The tools in `training/` preserve this particular classifier without retraining.
 They are deliberately specific to the reviewed architecture: two shared-weight
 256-unit dense/LayerNorm/ReLU branches, a shifted embedding view, minimum-of-logits
@@ -40,6 +49,11 @@ The tooling was revalidated with [ONNX 1.22.0](https://pypi.org/project/onnx/1.2
 in a separate environment after updating the dependency pin. All nine synthetic
 tests passed; the private model exported to identical TFLite bytes, and the
 8,474-window comparison retained the same error and zero changed decisions.
+
+On October 26, the expanded suite passed **all 12 training tests** with the
+compiled pinned interpreter configured, including the actual runtime parity test
+rather than a skip. The 12 repository source tests also passed. These checks
+validate conversion and tooling behavior, not acoustic acceptance.
 
 ## Small dependency setup
 
@@ -94,11 +108,16 @@ from it. Set `SOURCE_SHA256` to that reviewed value:
 python training/export_oww_tflite.py \
   --source private/current-model.onnx \
   --output private/current-model.tflite \
-  --expected-sha256 "$SOURCE_SHA256"
+  --expected-sha256 "$SOURCE_SHA256" \
+  --display-label 'Привет, Мышка (personal)' \
+  --language ru
 ```
 
-The output and its `.export.json` receipt are created with permissions `0600` and
-an output umask of `077`. Existing models or receipts are never overwritten.
+The model, its `.export.json` receipt and same-stem `.json` sidecar are created
+with permissions `0600` and an output umask of `077`. Existing outputs are never
+overwritten. The label must be unique among installed and HA-offered models; it
+does not alter the spoken phrase or the TFLite bytes. See the
+[export and selection notes](../training/README.md).
 The conversion stays float32. It preserves the shifted view, the minimum operation
 and the original calibration offset. It uses `STRIDED_SLICE`, `PACK` and `RESHAPE`
 because this release's interpreter does not implement `CONCATENATION`, even though
@@ -143,7 +162,7 @@ directory, not a firmware partition. For example, `current-model.json` contains:
 ```json
 {
   "type": "openwakeword",
-  "wake_word": "Привет, Мышка",
+  "wake_word": "Привет, Мышка (personal)",
   "model": "current-model.tflite",
   "trained_languages": ["ru"],
   "version": 1,
@@ -157,6 +176,27 @@ the actual slot threshold to **0.5**. The sidecar's recommendation does not set
 the runtime threshold. Verify the loaded file hash, selected phrase and threshold.
 Keep the custom model selected and review cache-purge behavior before purging
 unselected models.
+
+### Avoid duplicate selector labels
+
+The pilot exposed a label collision: the personal OWW model and an older
+microWakeWord model were both presented as «Привет, Мышка». The personal model
+loaded successfully, but selecting that phrase through HA switched to the older
+model. This was a selection problem, not evidence that the OWW model was unsupported.
+
+Give the personal library entry the unique display label
+**«Привет, Мышка (personal)»**. This changes the UI label, not the acoustic phrase.
+Then confirm all of the following together:
+
+- HA selected the intended unique option.
+- The persisted model ID points to the personal library entry.
+- Runtime logs report that model ID with **openWakeWord** ready.
+- The live TFLite hash matches the private export receipt.
+- The actual threshold is **0.5**, the secondary slot is **None**, and these
+  settings survive an ordinary reboot.
+
+Keep model IDs and hashes in the private receipt. Do not infer model identity from
+the displayed phrase alone or mark acoustic acceptance complete from a load log.
 
 **The web custom-model upload is not this path.** In this release it validates
 microWakeWord models, expects `type: micro`, and limits a file to 1 MiB. Our OWW

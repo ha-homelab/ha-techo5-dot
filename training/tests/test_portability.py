@@ -102,6 +102,39 @@ class ExportTests(unittest.TestCase):
         self.assertEqual(receipt.read_text(), "keep this")
         self.assertFalse(self.target.exists())
 
+    def test_unique_display_label_does_not_change_classifier(self):
+        self.export()
+        labeled = self.root / "personal.tflite"
+        report = exporter.export(self.source, labeled, hashlib.sha256(self.source.read_bytes()).hexdigest(),
+                                 display_label="Привет, Мышка (personal)", languages=["ru"])
+        sidecar = labeled.with_suffix(".json")
+        manifest = json.loads(sidecar.read_text())
+        self.assertEqual(self.target.read_bytes(), labeled.read_bytes())
+        self.assertEqual(manifest["wake_word"], "Привет, Мышка (personal)")
+        self.assertEqual(manifest["model"], "personal.tflite")
+        self.assertEqual(manifest["trained_languages"], ["ru"])
+        self.assertEqual(manifest["recommended_threshold"], .5)
+        self.assertEqual(report["manifest_sha256"], hashlib.sha256(sidecar.read_bytes()).hexdigest())
+        self.assertEqual(sidecar.stat().st_mode & 0o777, 0o600)
+
+    def test_existing_manifest_blocks_all_new_outputs(self):
+        sidecar = self.target.with_suffix(".json")
+        sidecar.write_text("keep this")
+        with self.assertRaises(FileExistsError):
+            exporter.export(self.source, self.target, hashlib.sha256(self.source.read_bytes()).hexdigest(),
+                            display_label="Привет, Мышка (personal)", languages=["ru"])
+        self.assertEqual(sidecar.read_text(), "keep this")
+        self.assertFalse(self.target.exists())
+        self.assertFalse(self.target.with_suffix(".export.json").exists())
+
+    def test_manifest_metadata_requires_label_and_explicit_language(self):
+        for label, languages in [("", ["ru"]), ("word\nother", ["ru"]),
+                                 ("word", None), (None, ["ru"]), ("word", ["not a tag"])]:
+            with self.subTest(label=label, languages=languages), self.assertRaises(ValueError):
+                exporter.export(self.source, self.target, hashlib.sha256(self.source.read_bytes()).hexdigest(),
+                                display_label=label, languages=languages)
+        self.assertEqual(sorted(p.name for p in self.root.iterdir()), ["source.onnx"])
+
     def test_same_operator_count_wrong_shift_is_rejected(self):
         node = next(n for n in self.model.graph.node if list(n.output) == ["slice1_end"])
         node.attribute[0].t.CopyFrom(nh.from_array(np.array([-2], np.int64)))

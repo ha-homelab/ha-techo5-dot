@@ -1,12 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1280" height="700" viewBox="0 0 1280 700" role="img" aria-labelledby="title desc">
-  <title id="title">Echo Dot pilot: current and planned architecture</title>
-  <desc id="desc">Current: Echo Dot with emOS and EchoMuse connects through EchoMuse Controller to Home Assistant. Planned: Echo Dot with TECHO5 connects directly to Home Assistant using the encrypted ESPHome-native API. Home Assistant continues to provide Russian speech recognition, local conversation and speech synthesis. Preparation only; nothing deployed.</desc>
+  <title id="title">Echo Dot pilot: previous and installed architecture</title>
+  <desc id="desc">Before migration: Echo Dot with emOS and EchoMuse connected through EchoMuse Controller to Home Assistant. Installed: Echo Dot with TECHO5 connects directly to Home Assistant using the encrypted ESPHome-native API. Installation health, pairing and a software reboot are confirmed; voice and music acceptance remain pending. Home Assistant provides Russian speech recognition, local conversation and speech synthesis.</desc>
   <rect width="1280" height="700" rx="24" fill="#101d31"/>
   <g font-family="Arial">
     <text x="52" y="64" font-size="29" font-weight="700" fill="#f6f8ff">One Dot. A different connection to Home Assistant.</text>
-    <text x="52" y="99" font-size="17" fill="#b8c9dd">Pilot preparation · TECHO5 Dot v1.0.34 · No firmware or Home Assistant changes yet</text>
+    <text x="52" y="99" font-size="17" fill="#b8c9dd">Healthy after software reboot · TECHO5 Dot v1.0.34 · Voice and music checks pending</text>
     <rect x="52" y="134" width="1176" height="200" rx="18" fill="#1e2742" stroke="#685d99"/>
-    <text x="76" y="168" font-size="16" font-weight="700" fill="#c9baff" letter-spacing="1">CURRENT · WORKING DEPLOYMENT</text>
+    <text x="76" y="168" font-size="16" font-weight="700" fill="#c9baff" letter-spacing="1">BEFORE MIGRATION · OCTOBER 25</text>
     <rect x="80" y="195" width="270" height="108" rx="12" fill="#332d55"/>
     <text x="105" y="233" font-size="21" font-weight="700" fill="#ffffff">Echo Dot 2</text>
     <text x="105" y="263" font-size="17" fill="#e0d9ff">emOS + EchoMuse</text>
@@ -14,26 +14,26 @@
     <polygon points="454,241 468,248 454,255" fill="#b8a6ff"/>
     <rect x="484" y="195" width="292" height="108" rx="12" fill="#332d55"/>
     <text x="508" y="233" font-size="21" font-weight="700" fill="#ffffff">EchoMuse Controller</text>
-    <text x="508" y="263" font-size="17" fill="#e0d9ff">Existing management path</text>
+    <text x="508" y="263" font-size="17" fill="#e0d9ff">Previous management path</text>
     <rect x="792" y="246.5" width="90" height="3" fill="#b8a6ff"/>
     <polygon points="882,241 896,248 882,255" fill="#b8a6ff"/>
     <rect x="912" y="195" width="286" height="108" rx="12" fill="#332d55"/>
     <text x="936" y="233" font-size="21" font-weight="700" fill="#ffffff">Home Assistant</text>
-    <text x="936" y="263" font-size="17" fill="#e0d9ff">Existing entities + Assist</text>
-    <rect x="52" y="356" width="1176" height="202" rx="18" fill="#163540" stroke="#5a9b9e" stroke-dasharray="8 6"/>
-    <text x="76" y="390" font-size="16" font-weight="700" fill="#8df4e4" letter-spacing="1">PLANNED · NOT DEPLOYED</text>
+    <text x="936" y="263" font-size="17" fill="#e0d9ff">Previous entities + Assist</text>
+    <rect x="52" y="356" width="1176" height="202" rx="18" fill="#163540" stroke="#5a9b9e"/>
+    <text x="76" y="390" font-size="16" font-weight="700" fill="#8df4e4" letter-spacing="1">INSTALLED · PAIRED WITH HOME ASSISTANT</text>
     <rect x="80" y="417" width="270" height="110" rx="12" fill="#1d5157"/>
     <text x="105" y="454" font-size="21" font-weight="700" fill="#ffffff">Echo Dot 2</text>
-    <text x="105" y="484" font-size="17" fill="#cdf6f2">TECHO5 + local wake word</text>
+    <text x="105" y="484" font-size="17" fill="#cdf6f2">TECHO5 v1.0.34 · slot a</text>
     <rect x="369" y="470.5" width="513" height="3" fill="#6ce6e2"/>
     <polygon points="882,465 896,472 882,479" fill="#6ce6e2"/>
     <text x="489" y="452" font-size="18" font-weight="600" fill="#bbfff0">Encrypted ESPHome-native API</text>
-    <text x="474" y="505" font-size="16" fill="#c2e5e8">Direct pairing · Map new entities after validation</text>
+    <text x="474" y="505" font-size="16" fill="#c2e5e8">Pairing + reboot verified · Voice tests pending</text>
     <rect x="912" y="417" width="286" height="110" rx="12" fill="#1d5157"/>
     <text x="936" y="454" font-size="21" font-weight="700" fill="#ffffff">Home Assistant</text>
     <text x="936" y="484" font-size="17" fill="#cdf6f2">Russian Assist pipeline</text>
     <text x="76" y="603" font-size="18" font-weight="600" fill="#f6f8ff">Shared services stay on the server</text>
     <text x="76" y="634" font-size="17" fill="#b8c9dd">Speech recognition → local conversation / household tools → Russian speech synthesis</text>
-    <text x="76" y="670" font-size="15" fill="#f7cf8b">Gates: supported maintenance access · recoverable baseline · compatible «Привет, Мышка» model</text>
+    <text x="76" y="670" font-size="15" fill="#f7cf8b">Next: room acoustics · complete audio path · music and Bluetooth acceptance</text>
   </g>
 </svg>
