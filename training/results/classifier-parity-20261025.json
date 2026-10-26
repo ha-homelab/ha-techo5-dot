@@ -28,5 +28,14 @@
   "full_audio_frontend_tested": false,
   "device_runtime_tested": false,
   "fresh_independent_acoustic_test": false,
+  "dependency_revalidation": {
+    "onnx_version": "1.22.0",
+    "onnxruntime_version": "1.23.2",
+    "synthetic_tests_passed": 9,
+    "byte_identical_tflite_export": true,
+    "windows_rechecked": 8474,
+    "decision_differences": 0,
+    "max_absolute_error": 0.0000016689300537109375
+  },
   "note": "No retraining. Numerical controls are embedding vectors, not noise recordings. This receipt is not evidence of improved room recognition or fewer false wakes."
 }

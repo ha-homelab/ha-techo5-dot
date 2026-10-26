@@ -36,10 +36,15 @@ independent acoustic test. TECHO5's complete audio frontend, sustained performan
 on the Dot and recognition across the room remain separate checks. The successful
 interpreter comparison ran on a macOS ARM64 host, not a Dot's ARMv7 processor.
 
+The tooling was revalidated with [ONNX 1.22.0](https://pypi.org/project/onnx/1.22.0/)
+in a separate environment after updating the dependency pin. All nine synthetic
+tests passed; the private model exported to identical TFLite bytes, and the
+8,474-window comparison retained the same error and zero changed decisions.
+
 ## Small dependency setup
 
 Reuse a suitable Python environment, or create one inside the ignored `private/`
-directory. Python 3.11 is the tested version. TensorFlow, training datasets and a
+directory. Python 3.11 with ONNX 1.22.0 is tested. TensorFlow, training datasets and a
 new training environment are not required.
 
 ```sh
