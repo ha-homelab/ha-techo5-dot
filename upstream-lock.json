@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "board": "biscuit",
+  "model": "RS03QR",
+  "release": "dot-v1.0.34",
+  "published_at": "2026-10-25T19:29:23Z",
+  "upstreams": {
+    "platform": {
+      "repository": "HuskerMinion/techo5-dot",
+      "commit": "88b26703d5e1a97d5ce0fee90805e8a3dd206a95"
+    },
+    "daemon": {
+      "repository": "HuskerMinion/techo5",
+      "commit": "248b9dafe3dec0ace21604f2b5986f7e52ab41d6"
+    }
+  },
+  "assets": [
+    {
+      "name": "echod-arm-dot",
+      "size": 28573858,
+      "sha256": "7ff899f40c971d262f3b6dece8eb04e1b099794be664faae2ecd0e5d456661fb",
+      "url": "https://github.com/HuskerMinion/techo5-dot/releases/download/dot-v1.0.34/echod-arm-dot"
+    },
+    {
+      "name": "manifest.json",
+      "size": 3916,
+      "sha256": "d7ad5b66a3414aa2f8beb1c8b3b774062e035b2574219413f66f62b871412881",
+      "url": "https://github.com/HuskerMinion/techo5-dot/releases/download/dot-v1.0.34/manifest.json"
+    },
+    {
+      "name": "manifest.json.sig",
+      "size": 89,
+      "sha256": "9c77038c89adf908005e9f686e14a3048397d58dd5aaa9a9e957eaf426fb8bf1",
+      "url": "https://github.com/HuskerMinion/techo5-dot/releases/download/dot-v1.0.34/manifest.json.sig"
+    },
+    {
+      "name": "SHA256SUMS",
+      "size": 1029,
+      "sha256": "f72bc36b9a0e81982efa2eef58d19f1e5dc73711c0fc9af34fc5e04329c6780e",
+      "url": "https://github.com/HuskerMinion/techo5-dot/releases/download/dot-v1.0.34/SHA256SUMS"
+    },
+    {
+      "name": "techo5-dot-kernel-bt.zImage-dtb",
+      "size": 5951508,
+      "sha256": "c2981fc9b8451a29b2d8a38bfd0029c62d78cf65d641bd03640df70e4a098082",
+      "url": "https://github.com/HuskerMinion/techo5-dot/releases/download/dot-v1.0.34/techo5-dot-kernel-bt.zImage-dtb"
+    },
+    {
+      "name": "techo5-dot-rescue-apks.tar",
+      "size": 4773376,
+      "sha256": "6939fb25c85aedd121d28b54b036746cfa5168bf54c7d2cd9ddf6d8165237e9e",
+      "url": "https://github.com/HuskerMinion/techo5-dot/releases/download/dot-v1.0.34/techo5-dot-rescue-apks.tar"
+    },
+    {
+      "name": "techo5-dot-rootfs-v1.0.34.tar.gz",
+      "size": 35627836,
+      "sha256": "7efb67c7fc856cb878f89a69f013f243df8d006cfce6ccc7e46bfee47cb06a61",
+      "url": "https://github.com/HuskerMinion/techo5-dot/releases/download/dot-v1.0.34/techo5-dot-rootfs-v1.0.34.tar.gz"
+    }
+  ]
+}

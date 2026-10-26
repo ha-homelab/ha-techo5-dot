@@ -1,0 +1,70 @@
+{
+  "repository": "https://github.com/HuskerMinion/techo5",
+  "revision": "248b9dafe3dec0ace21604f2b5986f7e52ab41d6",
+  "files": {
+    "echod/internal/lib/tflite/flatbuffers.go": {
+      "sha256": "3cfc2a8f4614610b95dcb08e2c48ef85975a89eb5b0e37691d5a2ad4b97d8585",
+      "bytes": 4716
+    },
+    "echod/internal/lib/tflite/interp.go": {
+      "sha256": "f8440acac1bd19f30f79f7b339386ce5c94831c4945e76d5e35411d30e7601ec",
+      "bytes": 11317
+    },
+    "echod/internal/lib/tflite/kernels_math.go": {
+      "sha256": "017dd56a975bb954725fdff2ad48c3df81fd5658c9a688906b434ad9afd7c07a",
+      "bytes": 9513
+    },
+    "echod/internal/lib/tflite/kernels_nn.go": {
+      "sha256": "0be9d4f4a257f209b97ef63b8117cb72762630687cda0236c4689b8a4629edb4",
+      "bytes": 12184
+    },
+    "echod/internal/lib/tflite/kernels_shape.go": {
+      "sha256": "0a50a058518f04cc1e40e6ae00f2de276419f0b9327bd4d159ebbb24b290c2cf",
+      "bytes": 5374
+    },
+    "echod/internal/lib/tflite/schema.go": {
+      "sha256": "11a76bd5d4d33e8a7b6e2c056619f4b4e03807d67477e6548ac5092e4ad120d0",
+      "bytes": 11811
+    },
+    "echod/internal/lib/tflite/stream.go": {
+      "sha256": "6dfea28a4910d1cb1c620fa4e52961f436146f709e6304f1c761d0349a78bfa2",
+      "bytes": 6607
+    },
+    "echod/internal/lib/vec/axpy_arm.s": {
+      "sha256": "0dce6d0550773006669671763ef5850d3d3adf1d3a4c65dda6e3b17c7dcc3c56",
+      "bytes": 1469
+    },
+    "echod/internal/lib/vec/axpy_arm64.s": {
+      "sha256": "7a4ca4e3c4acad88581980e46c9bd699a7c051137ba51517f33d2262ee582426",
+      "bytes": 2086
+    },
+    "echod/internal/lib/vec/dot_arm.s": {
+      "sha256": "36250321de37c56d3a7110fca96f7933f87332b5a2388b01744ee53dd79bac80",
+      "bytes": 1664
+    },
+    "echod/internal/lib/vec/dot_arm64.s": {
+      "sha256": "042ff0c37750434e0f6472d4fd2573286a4201b246a5c0d7bcdad64abf41aa6d",
+      "bytes": 3460
+    },
+    "echod/internal/lib/vec/vec.go": {
+      "sha256": "9327a9b61a8c483200e0723587e5ae3d88f9cdf48ec0a87847259e16bbe74bfb",
+      "bytes": 1863
+    },
+    "echod/internal/lib/vec/vec_arm.go": {
+      "sha256": "50d61223fa441e45edd9876c6606a6a87e6cd1f552330031ee73ba97e194f098",
+      "bytes": 813
+    },
+    "echod/internal/lib/vec/vec_arm64.go": {
+      "sha256": "73b7f5098de1566ad4f1a6acf0db0cb70db4d7eebe5d492b54e660241f0adc93",
+      "bytes": 735
+    },
+    "echod/internal/lib/vec/vec_noasm.go": {
+      "sha256": "e7c0ac2936c22189f6323dec22fd19eb8a05ee1337777bc50e19284c8d49973a",
+      "bytes": 495
+    },
+    "LICENSE": {
+      "bytes": 1076,
+      "sha256": "7d28464a69e308399941e24c9667fea00d35170c287084d02ccc472d2d247f1e"
+    }
+  }
+}

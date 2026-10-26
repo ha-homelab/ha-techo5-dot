@@ -1,0 +1,32 @@
+{
+  "date": "2026-10-25",
+  "scope": "Classifier conversion regression on existing development/validation embeddings",
+  "source_format": "ONNX float32 openWakeWord classifier",
+  "target_format": "TFLite float32 openWakeWord classifier",
+  "runtime_repository": "https://github.com/HuskerMinion/techo5",
+  "runtime_revision": "248b9dafe3dec0ace21604f2b5986f7e52ab41d6",
+  "runtime_tag": "dot-v1.0.34",
+  "execution_platform": "macOS ARM64 host",
+  "owner_positive_clips": 24,
+  "owner_negative_clips": 32,
+  "synthetic_positive_clips": 64,
+  "synthetic_negative_clips": 64,
+  "windows": {
+    "owner_positive": 1262,
+    "owner_negative": 1468,
+    "synthetic_positive": 2562,
+    "synthetic_negative": 2645,
+    "background": 512,
+    "numeric_controls": 25,
+    "total": 8474
+  },
+  "threshold": 0.5,
+  "absolute_tolerance": 0.00001,
+  "max_absolute_error": 0.0000016689300537109375,
+  "decision_differences": 0,
+  "passed": true,
+  "full_audio_frontend_tested": false,
+  "device_runtime_tested": false,
+  "fresh_independent_acoustic_test": false,
+  "note": "No retraining. Numerical controls are embedding vectors, not noise recordings. This receipt is not evidence of improved room recognition or fewer false wakes."
+}

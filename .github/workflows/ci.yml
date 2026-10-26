@@ -1,0 +1,122 @@
+name: Quality gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  merge_group:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  python:
+    uses: victron-venus/venus-os-ci-toolkit/.github/workflows/python-ci.yml@8008fd1db4c410640e7abddfc8bc75833cdcd970
+    with:
+      python-version: '3.11'
+      install-dependencies: false
+      run-lint: false
+      run-type-check: false
+      test-args: tests -q
+      # Report coverage; behavior and publication boundaries are tested explicitly.
+      coverage-threshold: 0
+      coverage-artifact-name: techo5-python-coverage
+
+  security:
+    uses: victron-venus/venus-os-ci-toolkit/.github/workflows/security-scan.yml@6b2d99519d513d2b871d2a845ddd6134dea4af2c
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    with:
+      languages: python,actions
+      run-codeql: true
+      run-trivy: true
+      run-dependency-review: true
+
+  source:
+    name: Public source validation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+      - name: Check source and private-data boundaries
+        run: |
+          python -m compileall -q scripts tests training
+          python -m json.tool upstream-lock.json > /dev/null
+          python scripts/check_public.py
+          python scripts/check_docs.py
+
+  training:
+    name: Wake classifier parity
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with:
+          go-version: '1.27.1'
+          cache: false
+      - name: Install conversion dependencies
+        run: python -m pip install -r training/requirements-verify.txt
+      - name: Fetch and build the pinned interpreter
+        env:
+          GOTOOLCHAIN: local
+          GOPROXY: 'off'
+          GOSUMDB: 'off'
+          CGO_ENABLED: '0'
+        run: |
+          python training/fetch_runtime.py --destination "$RUNNER_TEMP/techo5-parity"
+          cd "$RUNNER_TEMP/techo5-parity"
+          go build -trimpath -o wakeparity .
+      - name: Verify synthetic classification and refusal cases
+        env:
+          TECHO5_PARITY_RUNTIME: ${{ runner.temp }}/techo5-parity/wakeparity
+        run: python -m unittest discover -s training/tests -v
+
+  gate:
+    name: CI gate
+    needs: [python, security, source, training]
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        with:
+          egress-policy: audit
+      - name: Require all validation jobs
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        shell: python3 {0}
+        run: |
+          import json, os
+          results = json.loads(os.environ['RESULTS'])
+          expected = {'python', 'security', 'source', 'training'}
+          if set(results) != expected:
+              raise SystemExit('Validation job inventory differs')
+          failed = {name: value['result'] for name, value in results.items()
+                    if value['result'] != 'success'}
+          if failed:
+              raise SystemExit(f'Validation did not pass: {failed}')
+          print('All validation jobs passed.')
