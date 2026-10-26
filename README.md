@@ -47,3 +47,5 @@ python3 scripts/verify_assets.py private/releases/dot-v1.0.34/echod-arm-dot
 
 Personalized model conversion has separate optional dependencies and regression
 checks described in the [wake-word guide](docs/wake-word.md).
+
+Repository creation and shared CI policy are described in [repository governance](docs/repository-governance.md).
