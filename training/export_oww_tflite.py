@@ -13,6 +13,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 
 import flatbuffers
 import numpy as np
@@ -249,13 +250,36 @@ def audited_weights(model):
     return weights, epsilon[0]
 
 
-def export(source, target, expected_sha256):
+def wake_manifest(target, display_label, languages):
+    """Keep HA's display label separate from the classifier and its filename ID."""
+    if display_label is None:
+        if languages:
+            raise ValueError("--language requires --display-label")
+        return None
+    if target.suffix != ".tflite":
+        raise ValueError("A wake-word manifest requires a .tflite output filename")
+    if not display_label.strip() or any(ord(c) < 32 or ord(c) == 127 for c in display_label):
+        raise ValueError("Display label must be nonempty and contain no control characters")
+    if not languages or any(not re.fullmatch(r"[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*", s) for s in languages):
+        raise ValueError("Supply --language with an explicit language tag, for example ru")
+    return {
+        "type": "openwakeword", "wake_word": display_label.strip(),
+        "model": target.name, "trained_languages": list(dict.fromkeys(languages)),
+        "version": 1, "recommended_threshold": 0.5,
+    }
+
+
+def export(source, target, expected_sha256, *, display_label=None, languages=None):
     os.umask(0o077)
+    manifest = wake_manifest(target, display_label, languages)
     if source.stat().st_size > 8 << 20:
         raise ValueError("Source exceeds this architecture's 8 MiB input limit")
     report_path = target.with_suffix(".export.json")
-    if target == report_path or target.exists() or report_path.exists():
-        raise FileExistsError("Model or export receipt already exists")
+    output_paths = [target, report_path]
+    if manifest is not None:
+        output_paths.append(target.with_suffix(".json"))
+    if len(set(output_paths)) != len(output_paths) or any(p.exists() for p in output_paths):
+        raise FileExistsError("Model, export receipt or requested manifest already exists")
     raw = source.read_bytes()
     source_hash = hashlib.sha256(raw).hexdigest()
     if source_hash != expected_sha256:
@@ -314,7 +338,13 @@ def export(source, target, expected_sha256):
             "input_shape": [1, 16, 96], "output_shape": [1, 1], "dtype": "float32",
             "logit_offset": float(weights["calibration_logit_offset"]), "threshold": 0.5,
             "note": "Classifier export only; full audio frontend and device acoustic parity are not established."}
-    write_exclusive_files([(target, artifact), (report_path, (json.dumps(report, indent=2) + "\n").encode())])
+    files = [(target, artifact)]
+    if manifest is not None:
+        manifest_bytes = (json.dumps(manifest, ensure_ascii=False, indent=2) + "\n").encode()
+        report["manifest_sha256"] = hashlib.sha256(manifest_bytes).hexdigest()
+        files.append((target.with_suffix(".json"), manifest_bytes))
+    files.append((report_path, (json.dumps(report, indent=2) + "\n").encode()))
+    write_exclusive_files(files)
     return report
 
 
@@ -323,8 +353,10 @@ def main():
     p.add_argument("--source", type=Path, required=True)
     p.add_argument("--output", type=Path, required=True)
     p.add_argument("--expected-sha256", required=True)
+    p.add_argument("--display-label", help="Write a sidecar with a label unique among installed/HA-offered models; does not change the spoken phrase")
+    p.add_argument("--language", action="append", help="Trained language tag for the sidecar (for example ru); repeat for multiple languages")
     a = p.parse_args()
-    report = export(a.source, a.output, a.expected_sha256)
+    report = export(a.source, a.output, a.expected_sha256, display_label=a.display_label, languages=a.language)
     print(json.dumps(report, indent=2))
 
 

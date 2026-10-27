@@ -7,7 +7,7 @@ from scripts.check_public import MAX_TEXT_BYTES, audit, path_problem
 
 class PublicBoundary(unittest.TestCase):
     def test_generated_and_private_files(self):
-        for name in ('private/settings.json', 'recordings/take.wav', 'voice.onnx', 'voice.tflite', 'host.local.json', 'state.tfstate'):
+        for name in ('private/settings.json', 'recordings/take.wav', 'voice.onnx', 'voice.tflite', 'host.local.json', 'state.tfstate', 'cache-repair.e2undo'):
             with self.subTest(name=name):
                 self.assertIsNotNone(path_problem(name))
         self.assertIsNone(path_problem('docs/migration.md'))

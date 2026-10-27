@@ -90,6 +90,7 @@ controller-data/
 escrow/
 support-bundles/
 *.img.*
+*.e2undo
 *.onnx.data
 
 # Local test reports.

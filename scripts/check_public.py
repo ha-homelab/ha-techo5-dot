@@ -23,7 +23,8 @@ PRIVATE_SUFFIXES = (".img", ".img.gz", ".bin", ".zip", ".tar", ".tar.gz", ".tgz"
                     ".onnx", ".onnx.data", ".tflite", ".npy", ".npz", ".h5", ".keras",
                     ".wav", ".mp3", ".flac", ".ogg", ".m4a", ".mp4", ".pcm", ".raw",
                     ".s16le", ".pem", ".key", ".p12", ".pfx", ".psk", ".log",
-                    ".db", ".sqlite", ".sqlite3", ".tfstate", ".tfplan", ".tfvars", ".pyc")
+                    ".db", ".sqlite", ".sqlite3", ".tfstate", ".tfplan", ".tfvars", ".pyc",
+                    ".e2undo")
 PRIVATE_NAMES = frozenset({"secrets.yaml", "secrets.yml", "credentials.json", "credentials.tfrc.json"})
 MAX_TEXT_BYTES = 2 * 1024 * 1024
 IPV4 = re.compile(r"(?<![\w.])(?:\d{1,3}\.){3}\d{1,3}(?![\w.])")
