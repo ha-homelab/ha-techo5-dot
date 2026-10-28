@@ -1,5 +1,21 @@
 # Pilot status
 
+## October 27, 2026 — obsolete controller identity retired
+
+The migrated Dot's former EchoMuse controller record was still approved and advertised through mDNS while offline. Its disabled Bluetooth entry therefore remained visible beside the active TECHO5 scanner. HA confirmed the migrated device was running **TECHO5 v1.0.36**; no firmware update was performed during this repair. The other physical Dot was online through EchoMuse and was preserved.
+
+After a bounded private backup, the old controller record was removed through its administrator API, followed by its three obsolete HA voice/BLE/scanner entries. HA removed three old device records and ten entity records. The backup was approximately 2.65 MB compressed and included an integrity-checked SQLite online backup plus 56 training files; no full Alexa filesystem archive was created. The other Dot's controller configuration was unchanged, and the active HA entries remained loaded.
+
+Two stale media-player allowlist references in the local assistant configuration were also replaced with the migrated Dot's current native and Music Assistant players. These changes are active after an HA restart: HA reports running, both satellites are idle, and the wake word and both assistant selectors are preserved. The old Music Assistant player was removed through its supported player-configuration API; HA then removed its orphan entity and empty device automatically. This is separate from the three-entry cleanup above.
+
+The other physical Dot's separate encrypted EchoMuse BLE endpoint was enrolled in HA. It connected and subscribed successfully. The TECHO5 device also had a distinct STP/Bluetooth bridge failure that prevented scanning despite its registered proxy; a normal operating-system reboot restored reception. No firmware or wake-word model was changed.
+
+Final verification received **12 fresh TECHO5 advertisement reports and 4 fresh EchoMuse reports in 45 seconds**, excluding 42 cached reports. Both satellites were idle. Saved settings, personal-model, sidecar and authentication-key hashes were unchanged; temporary SSH access was disabled again. HA recreated the TECHO5 child Bluetooth entry with the same scanner identity and source ownership while preserving its parent ESPHome entry and encryption key. The native TECHO5 diagnostic is an advertisement **rate** (`/s`); the EchoMuse sensor is a cumulative total.
+
+HA finished running with **exactly two loaded Bluetooth entries, one per physical Dot**. The three old entries and former Music Assistant wrapper were absent, with no pending ESPHome setup flows or related repairs. Protected Assist pipeline, household and family configuration files were unchanged. The assistant media-player allowlist was updated in its separate configuration file as described above.
+
+This confirms recovery of the observed outage. Long-term nonrecurrence of the radio failure has not been established, and no minimum advertisement rate or audible voice/music result is implied. See the [retirement procedure](home-assistant.md#retire-the-former-controller-identity) for stale-entry prevention and [scanner recovery](home-assistant.md#a-registered-scanner-can-still-be-silent) for the separate radio issue.
+
 ## October 26, 2026 — signed update to v1.0.35
 
 The active Dot was updated through Home Assistant to **TECHO5 v1.0.35, slot b**. The release manifest signature and hashes were verified. The installed daemon matches the official binary digest; the personal model and its sidecar retain their previous hashes. Home Assistant reports the current version, no update in progress and unchanged voice, BLE and Sendspin settings. Slot b was committed as good with a healthy boot counter; the previous good v1.0.34 remains in slot a. Automatic future updates remain disabled.
