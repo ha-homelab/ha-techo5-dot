@@ -1,10 +1,10 @@
 # HA · TECHO5 Dot
 
-**Ein Echo Dot 2 läuft jetzt mit TECHO5 und ist direkt mit Home Assistant gekoppelt. Sprach- und Musiktests stehen noch aus.**
+**Beide Echo Dot 2 laufen jetzt mit TECHO5 und sind direkt mit Home Assistant verbunden. Die technischen Prüfungen sind bestanden; Hörtests stehen noch aus.**
 
 [English](README.md) · [Русский](README.ru.md) · [Deutsch](README.de.md) · [Español](README.es.md) · [Français](README.fr.md)
 
-Auf dem Pilotgerät läuft **TECHO5 Dot v1.0.35, Slot b**. Der Installer bestätigte einen erfolgreichen Start; die API antwortet und die verschlüsselte Kopplung mit HA ist abgeschlossen. Der zweite Dot ist offline und unverändert. Ein softwaregesteuerter Neustart bestätigte den gesunden Startzustand und den Erhalt der Kopplung und persönlichen Modelleinstellungen. Praktische Sprach- und Musiktests sind noch offen.
+**Dot 001 läuft mit v1.0.38 in Slot a; Dot 002 bleibt auf v1.0.36.** Bei der Migration am 28. Oktober wurden das persönliche Aktivierungsmodell erhalten, die verschlüsselte Verbindung eingerichtet, Dashboard und Musikzuordnung aktualisiert und alte EchoMuse-Einträge entfernt. Ein Software-Neustart wurde geprüft. Beide Bluetooth-Proxys liefern neue Meldungen. Sprach- und Musikhörtests sind ein eigener Prüfschritt. Siehe [Status](docs/status.md).
 
 Das persönliche Modell wurde von ONNX nach OWW TFLite konvertiert und von openWakeWord geladen. Sein eindeutiger Einstellungsname lautet **«Привет, Мышка (personal)»**; gesprochen wird weiterhin **«Привет, Мышка»**. Bestätigt sind ein Schwellenwert von **0.5** und kein zweites Aktivierungswort. Beide Assist-Auswahlen verwenden **Local Russian Home**; BLE-Proxy und gestreamte Antworten sind aktiviert. Erkennung auf Entfernung, Fehlaktivierungen, Latenz und Musik müssen noch geprüft werden.
 

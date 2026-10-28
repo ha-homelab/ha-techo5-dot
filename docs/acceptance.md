@@ -1,6 +1,6 @@
-# One-device acceptance
+# Per-device acceptance
 
-Record observations and timings privately. An unchecked item is pending, not a pass.
+Record observations and timings privately. An unchecked item is pending, not a pass. The original pilot checklist below remains dated evidence. The [October 28 deployment record](status.md#october-28-2026--both-physical-dots-migrated) separately covers Dot 001 on v1.0.38, including its healthy reboot, model/daemon hashes, encrypted pairing, route migration and fresh BLE forwarding. Acoustic tests remain separate for both units.
 
 - [x] Confirm the selected Dot 2, working pre-existing TWRP and retained NS6574 build 7623.
 - [x] Resolve the damaged cache using verified backup metadata; obtain a clean read-only filesystem check.
@@ -26,4 +26,4 @@ Record observations and timings privately. An unchecked item is pending, not a p
 - [ ] Review the documented update/rollback mechanism before enabling updates.
 - [ ] Check remaining automation and music-routing references; record unresolved regressions.
 
-Installation checkpoints were recorded on October 26, 2026; registry retirement was recorded on October 27. Keep the other Dot's configuration intact. Expand only after the pilot meets the household's reliability needs.
+Installation checkpoints were recorded on October 26, 2026; registry retirement was recorded on October 27. Dot 001 was subsequently migrated on October 28 at the user's request; Dot 002's configuration was preserved. Record reliability and audible acceptance per physical unit.

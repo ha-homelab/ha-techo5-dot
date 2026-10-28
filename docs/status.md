@@ -1,5 +1,21 @@
 # Pilot status
 
+## October 28, 2026 — both physical Dots migrated
+
+The remaining EchoMuse unit, **Dot 001 / Audiocenter**, now runs **TECHO5 v1.0.38 in slot a**. Dot 002 remains on **v1.0.36**; its firmware, native HA entry, pairing data and voice selections were preserved. The installer source was pinned to [`e369da6fb320c79d027acf25acfab7c4ab8c4cd9`](https://github.com/HuskerMinion/techo5-dot/tree/e369da6fb320c79d027acf25acfab7c4ab8c4cd9), and the release manifest signature and asset hashes were verified. This is a separate deployment record; the original v1.0.34 pilot lock remains historical.
+
+The USB serial identity, existing TWRP and retained NS6574/7623 system were verified before installation. This unit also had the emOS cache-superblock damage described in the [recovery record](emOS-cache-recovery.md). Three surviving metadata copies agreed. Standard filesystem repair with a 48 KiB undo file was followed by a clean read-only check. No cache format or userdata wipe was performed.
+
+The per-device recovery archive is approximately **51.8 MB compressed**. All 14 saved image files independently matched their source sizes and SHA-256 hashes. The installer wrote and read back the generated boot image; its first boot was healthy. A subsequent normal software reboot also reached a healthy slot a, with the official daemon hash and personal-model hashes matching. Slot b is still empty on this newly installed unit; the initial migration is not protected by an older TECHO5 slot.
+
+The personal **«Привет, Мышка (personal)»** model remains the sole selected wake word at threshold **0.5**. Both Assist selectors use **Local Russian Home**, streamed replies and the wake tone are configured, and training/utterance capture remains off. Encrypted ESPHome pairing, the native player and the Music Assistant Sendspin player are available. SSH and the remote API remain off. These checks do not establish audible recognition or playback quality.
+
+The Audiocenter card, household command routes, family-activity music mapping and assistant media-player allowlist now use the native TECHO5 and current Music Assistant identities. The old controller record, three HA voice/BLE/scanner entries and old Music Assistant player were retired. The bounded controller backup passed SQLite integrity validation; all **56 training files** matched after retirement. HA returned to running after a normal restart, with the shared Assist pipeline file unchanged.
+
+Per-scanner Home Assistant diagnostics confirmed **Dot 001: refreshed observations from 10 distinct devices over 11.39 seconds, Dot 002: refreshed observations from 35 distinct devices over 11.39 seconds**; both scanners' last-detection timestamps advanced. There are two loaded scanner entries, one per physical Dot. The shared 45-second advertisement feed reported 36 fresh events for Dot 002 and none for Dot 001, while the latter's own radio received 23 advertising reports in an 8-second trace. Per-scanner HA timestamps resolve that misleading shared-feed result: a zero count in the shared feed alone is not proof of a silent proxy. These checks establish fresh forwarding during the observation, not long-term radio reliability or active GATT connections.
+
+No microphone recording, music playback, spoken response or physical home-control action was triggered by these maintenance checks. Physical cold-boot and room-distance voice/music acceptance remain user tests. Later offered firmware releases were not silently installed during this pinned migration.
+
 ## October 27, 2026 — obsolete controller identity retired
 
 The migrated Dot's former EchoMuse controller record was still approved and advertised through mDNS while offline. Its disabled Bluetooth entry therefore remained visible beside the active TECHO5 scanner. HA confirmed the migrated device was running **TECHO5 v1.0.36**; no firmware update was performed during this repair. The other physical Dot was online through EchoMuse and was preserved.

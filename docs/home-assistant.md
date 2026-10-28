@@ -2,7 +2,7 @@
 
 ## Current connection
 
-The selected Dot runs **TECHO5 v1.0.36** and is paired directly with Home Assistant through its **encrypted ESPHome-native API**. The installed version was confirmed in HA on October 27, 2026; no firmware update was performed during that day's Bluetooth repair. The other physical Dot is online and still uses EchoMuse Controller. Both now supply fresh Bluetooth observations. See [pilot status](status.md) for dated verification and the distinction between installation and end-to-end acceptance.
+Both physical Dots now connect directly through encrypted ESPHome: **Audiocenter / Dot 001 runs TECHO5 v1.0.38**, and **Dot 002 remains on v1.0.36**. Neither Dot depends on its former EchoMuse Controller record. Dashboard and voice/music routes were reconciled, and both scanners forwarded fresh Bluetooth observations after the October 28 migration. See [deployment status](status.md) for the exact checks and remaining acoustic acceptance.
 
 Before migration, this Dot used emOS/EchoMuse through EchoMuse Controller. The installer preserved its older EchoLocal name and pairing material and now advertises the physical device's factory network identity. That identity is different from the former controller's virtual identity. Reconcile existing HA entries before treating a discovery as a new physical speaker; do not publish either the identifiers or the encryption key.
 
@@ -27,6 +27,23 @@ agent and female Russian **Baya** speech configuration. Do not move private home
 queries to a cloud model as part of the firmware switch. Other existing speech
 providers may still have network dependencies; this is not a claim that the whole
 pipeline is offline.
+
+## Device administration after migration
+
+A migrated Dot runs TECHO5 Linux and connects directly to HA; its old EchoMuse
+Controller console no longer controls it. The USB serial console was verified
+on Dot 001 after installation and after a normal software reboot.
+
+For network administration, enable the device's **SSH** switch in HA and use
+`ssh root@<dot-address>` with the private key matching the operator public key
+installed during migration. The public repository contains no login secrets,
+and this deployment does not rely on a shared SSH password. Turn SSH off after
+maintenance. In the verified final state, SSH and the remote API are off.
+
+Normal voice and music operation requires power and Wi-Fi, not a USB connection
+to Synology. Retain USB data access for recovery or future system migrations.
+A saved configuration alone is not an operating-system rollback; see
+[migration and recovery](migration.md).
 
 ## Entities, dashboard and Bluetooth
 
