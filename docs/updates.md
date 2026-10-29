@@ -1,5 +1,9 @@
 # Firmware updates
 
+If a Dot answers ping but its native HA entities remain unavailable after
+repeated boots, follow [rescue-mode diagnosis and recovery](rescue-recovery.md)
+before considering another firmware installation.
+
 ## October 29, 2026: both Dots updated to v1.0.40
 
 Both native Home Assistant firmware entities offered **v1.0.40**. The updates were installed sequentially from **v1.0.39**, preserving the current personal wake-word and Assist configuration. The release manifest signature was verified before installation; manifest SHA-256: `fed13874c391baa844ac939d21251427b182a9f82042c276f202fa8de1962a0e`.
