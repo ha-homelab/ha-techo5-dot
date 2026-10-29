@@ -2,7 +2,8 @@
 
 Experimental development: [guarded one-way announcements](integrations/guarded-announcement/README.md)
 defines request-owned audio delivery with busy refusal, expiry and deduplication.
-It is separate from the installed stock firmware; acoustic acceptance is pending.
+The [alpha build and validation record](docs/guarded-announcement-validation.md)
+separates software checks from the still-pending acoustic acceptance.
 
 **Both Echo Dot 2 units now run TECHO5 and connect directly to Home Assistant. Administrative checks pass; voice and music listening tests remain separate.**
 
@@ -14,7 +15,9 @@ This repository records compatibility decisions, private preparation and accepta
 
 ## Where we are
 
-Both Dots now run **TECHO5 v1.0.39 after the October 28 signed OTA update**. The October 28 migration preserved the personal wake model, paired the remaining unit with encrypted ESPHome, updated its dashboard and music routes, and removed its obsolete EchoMuse registrations. A software reboot passed. Fresh Bluetooth reports were received from both physical Dots. End-to-end voice/music tests remain pending; see the dated [status](docs/status.md).
+Both Dots now run the experimental **v1.0.40-myshka.1.alpha.1 daemon**, built from the exact upstream v1.0.40 source and the guarded-announcement overlay. Both installations passed running/on-disk hash verification and Home Assistant capability checks. This was a controlled daemon replacement, not a signed OTA update. See the [validation record](docs/guarded-announcement-validation.md) for artifact hashes and limits.
+
+The October 28 migration preserved the personal wake model, paired the remaining unit with encrypted ESPHome, updated its dashboard and music routes, and removed its obsolete EchoMuse registrations. End-to-end voice/music tests remain separate; see the dated [status](docs/status.md).
 
 The personal TFLite model has loaded in the openWakeWord engine. Its unique selector label is **«Привет, Мышка (personal)»**; the spoken phrase remains **«Привет, Мышка»**. The verified threshold is **0.5**, with no second wake word. Both Assist pipeline selectors use **Local Russian Home**; BLE proxy and streamed replies are enabled. These settings do not establish acoustic recognition, smooth playback or early audible replies.
 

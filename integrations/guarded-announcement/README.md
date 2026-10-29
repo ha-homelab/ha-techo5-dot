@@ -93,6 +93,9 @@ checks and rollback. It does not flash a boot image or replace OTA signing keys.
 
 ## Acceptance and release boundary
 
+The [dated validation record](../../docs/guarded-announcement-validation.md)
+lists the published alpha artifact hashes, software checks and acceptance limits.
+
 Offline concurrency, deadline, deduplication and ownership tests must pass before
 enabling the capability flags. Firmware compilation does not prove audio quality
 or an audible end-to-end result. Acoustic acceptance is pending until an operator

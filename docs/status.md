@@ -1,5 +1,26 @@
 # Pilot status
 
+## October 29, 2026 — guarded-announcement alpha installed
+
+Both Dots run **v1.0.40-myshka.1.alpha.1**, a downstream daemon built from the exact
+upstream v1.0.40 source. The controlled replacement and watchdog acknowledgement
+passed separately on both devices, including the running and on-disk binary
+hashes. Home Assistant exposes all four guarded announcement services and both
+devices return all five required capability flags. Their voice and media
+entities are idle and their existing telephone accounts report ready. Each
+physical Dot retains its single existing SIP extension.
+
+The second installation overlapped the already coordinated Home Assistant
+restart. Its verifier waited for the native entities to reconnect and completed
+within the acknowledgement deadline; no additional HA restart or bypass was
+used. Three subsequent capability requests per device all passed. These were
+read-only checks, not announcement submissions.
+
+No test speech, music, ringing, call or recording was initiated. Acoustic
+acceptance remains pending. Automatic firmware installation remains disabled;
+an upstream OTA update could replace this experimental daemon. See the
+[published build and validation record](guarded-announcement-validation.md).
+
 ## October 28, 2026 — both Dots updated to v1.0.39
 
 Both Dots now run **TECHO5 v1.0.39** following sequential signed OTA updates requested in Home Assistant. Existing configuration values were preserved, both units reconnected after their automatic reboots, and both Bluetooth proxies forwarded fresh observations. The native voice and Music Assistant players are available. No acoustic test was performed. See the [update record](updates.md) for verification and its limits.
