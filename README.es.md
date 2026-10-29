@@ -13,3 +13,5 @@ La preparación y la reparación de cache tienen su propio registro. Las antigua
 Guías detalladas, actualmente en inglés: [estado](docs/status.md), [migración](docs/migration.md), [palabra de activación](docs/wake-word.md), [Home Assistant](docs/home-assistant.md), [aceptación](docs/acceptance.md).
 
 [Actualización a v1.0.35 mediante HA](docs/updates.md).
+
+[Teléfono SIP con una centralita propia](docs/phone.md): configuración y comprobación separada de llamadas (en inglés).

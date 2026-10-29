@@ -13,3 +13,5 @@ La préparation et la réparation de cache sont consignées séparément. Les an
 Guides détaillés, actuellement en anglais : [état](docs/status.md), [migration](docs/migration.md), [mot d'activation](docs/wake-word.md), [Home Assistant](docs/home-assistant.md), [validation](docs/acceptance.md).
 
 [Mise à jour vers v1.0.35 via HA](docs/updates.md).
+
+[Téléphone SIP avec votre propre PBX](docs/phone.md) : configuration et vérification distincte des appels (en anglais).

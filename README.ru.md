@@ -13,3 +13,5 @@
 Подробные руководства пока на английском: [статус](docs/status.md), [переход](docs/migration.md), [wake word](docs/wake-word.md), [Home Assistant](docs/home-assistant.md), [проверки](docs/acceptance.md).
 
 [Обновление v1.0.35 через HA](docs/updates.md).
+
+[SIP-телефон через собственную АТС](docs/phone.md): настройка и отдельная проверка звонков (на английском).
