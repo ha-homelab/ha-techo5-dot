@@ -4,7 +4,7 @@
 
 [English](README.md) · [Русский](README.ru.md) · [Deutsch](README.de.md) · [Español](README.es.md) · [Français](README.fr.md)
 
-**Les deux Dot utilisent v1.0.39 après la mise à jour OTA signée du 28 octobre.** La migration du 28 octobre a conservé le modèle personnel, configuré la connexion chiffrée, actualisé le tableau de bord et les destinations musicales, puis supprimé les anciens enregistrements EchoMuse. Un redémarrage logiciel a été vérifié. Les deux proxies Bluetooth transmettent de nouvelles annonces. Les essais vocaux et musicaux restent une étape distincte. Voir le [statut](docs/status.md).
+**Les deux Dot utilisent la version expérimentale v1.0.40-myshka.1.beta.1.** `duck_music` permet les annonces sur une musique atténuée ; `skip` reste le mode par défaut. L’installation et la vérification des empreintes sont terminées sur les deux appareils. Il s’agit d’une compilation distincte du daemon, pas d’une mise à jour OTA signée. Voir les [vérifications et limites](docs/guarded-announcement-ducking.md).
 
 Le modèle personnel a été converti d'ONNX en OWW TFLite et chargé par openWakeWord. Son libellé unique dans les réglages est **«Привет, Мышка (personal)»** ; la phrase prononcée reste **«Привет, Мышка»**. Le seuil vérifié est **0.5**, sans second mot d'activation. Les deux sélecteurs Assist utilisent **Local Russian Home** ; le proxy BLE et les réponses en streaming sont activés. La portée, les faux déclenchements, la latence et la musique restent à vérifier.
 

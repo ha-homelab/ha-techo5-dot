@@ -1,5 +1,40 @@
 # Pilot status
 
+## October 29, 2026 — music-ducking beta installed
+
+Both Dots run **v1.0.40-myshka.1.beta.1** and return the new `duck_music`
+capability through **echomuse_home 0.4.0b2**. The exact running/on-disk hashes
+and watchdog acknowledgements passed on each device. Announcements can now mix
+with supported local music using the configured attenuation; default `skip`
+behavior remains unchanged. The second Dot's temporary SSH access is off again.
+The Audiocenter Sendspin check completed over continuing music, preserved master
+volume and deduplicated a retry. The listener confirmed the announcement and
+attenuation. Mixing on the second Dot has not been checked acoustically.
+
+See the [beta record](guarded-announcement-ducking.md) for the complete contract,
+software checks, installation scope, artifacts and acceptance limits.
+
+## October 29, 2026 — guarded-announcement alpha installed
+
+Both Dots run **v1.0.40-myshka.1.alpha.1**, a downstream daemon built from the exact
+upstream v1.0.40 source. The controlled replacement and watchdog acknowledgement
+passed separately on both devices, including the running and on-disk binary
+hashes. Home Assistant exposes all four guarded announcement services and both
+devices return all five required capability flags. Their voice and media
+entities are idle and their existing telephone accounts report ready. Each
+physical Dot retains its single existing SIP extension.
+
+The second installation overlapped the already coordinated Home Assistant
+restart. Its verifier waited for the native entities to reconnect and completed
+within the acknowledgement deadline; no additional HA restart or bypass was
+used. Three subsequent capability requests per device all passed. These were
+read-only checks, not announcement submissions.
+
+No test speech, music, ringing, call or recording was initiated. Acoustic
+acceptance remains pending. Automatic firmware installation remains disabled;
+an upstream OTA update could replace this experimental daemon. See the
+[published build and validation record](guarded-announcement-validation.md).
+
 ## October 28, 2026 — both Dots updated to v1.0.39
 
 Both Dots now run **TECHO5 v1.0.39** following sequential signed OTA updates requested in Home Assistant. Existing configuration values were preserved, both units reconnected after their automatic reboots, and both Bluetooth proxies forwarded fresh observations. The native voice and Music Assistant players are available. No acoustic test was performed. See the [update record](updates.md) for verification and its limits.
