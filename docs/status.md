@@ -18,10 +18,16 @@ and returned to idle after the PBX ended its short Wait application. This
 incoming control test did not send far-end audio. No test channels remained,
 and the original wake, microphone and Sendspin settings were preserved.
 
-A separate PBX audio-service test reached an answered SIP channel but its server
-AGI failed and played the dialplan's failure tone before ending. That route is
-not accepted as working; its server-side diagnostics were handed to the PBX
-owner. No repeated calls or PBX configuration changes were made by this pilot.
+A separate PBX audio-service initially failed because its caller allowlist did
+not include the new endpoint. After the PBX owner fixed and deployed that list,
+one bounded repeat logged playback of the prepared audio file, the successful
+`DIALAUDIOSTATUS=ok` dialplan branch and normal PBX hangup. The Dot returned to
+Ready with no test channel left and unchanged settings. The short playback ended
+between RTP samples: the first sample showed 96 received packets before outbound
+playback, and no channel remained for the second. This repeat therefore confirms
+the playback/control path, not complete bidirectional packet counts or audible
+quality. No further test calls were made before handing the quiet window back
+to the PBX owner.
 
 Both existing media cards now include native Phone, Phone call, Answer call and
 Hang up rows, and the old controller heading was replaced with TECHO5. No custom
