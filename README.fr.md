@@ -13,3 +13,5 @@ La préparation et la réparation de cache sont consignées séparément. Les an
 Guides détaillés, actuellement en anglais : [état](docs/status.md), [migration](docs/migration.md), [mot d'activation](docs/wake-word.md), [Home Assistant](docs/home-assistant.md), [validation](docs/acceptance.md).
 
 [Mise à jour vers v1.0.35 via HA](docs/updates.md).
+
+Consultez [l’audit des fonctions et le plan d’extension](docs/capabilities.md), avec catalogue des actions et carte de diagnostic (en anglais).

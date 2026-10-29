@@ -51,3 +51,5 @@ Personalized model conversion has separate optional dependencies and regression
 checks described in the [wake-word guide](docs/wake-word.md).
 
 Repository creation and shared CI policy are described in [repository governance](docs/repository-governance.md).
+
+Read the [capability audit and extension plan](docs/capabilities.md), with a native action catalog and a read-only maintenance card.

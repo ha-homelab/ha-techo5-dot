@@ -13,3 +13,5 @@ La preparación y la reparación de cache tienen su propio registro. Las antigua
 Guías detalladas, actualmente en inglés: [estado](docs/status.md), [migración](docs/migration.md), [palabra de activación](docs/wake-word.md), [Home Assistant](docs/home-assistant.md), [aceptación](docs/acceptance.md).
 
 [Actualización a v1.0.35 mediante HA](docs/updates.md).
+
+Consulta la [auditoría de funciones y el plan de ampliación](docs/capabilities.md), con catálogo de acciones y tarjeta de diagnóstico (en inglés).

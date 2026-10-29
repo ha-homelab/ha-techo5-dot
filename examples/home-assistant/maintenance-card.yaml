@@ -1,0 +1,101 @@
+# Read-only Lovelace card for the verified v1.0.40 native schema.
+# Replace echo_dot_example with the actual entity prefix.
+# Does not enable services, change a switch or record audio.
+# Ambient noise stays unknown while its separate switch is off.
+# Internal temperatures are not room temperature; load is not CPU percent.
+# BLE advertisements are a rate, not proof of active GATT support.
+type: entities
+title: TECHO5 health
+show_header_toggle: false
+entities:
+  - entity: sensor.echo_dot_example_last_boot
+    tap_action:
+      action: none
+    hold_action:
+      action: none
+    double_tap_action:
+      action: none
+  - entity: sensor.echo_dot_example_wifi_signal
+    tap_action:
+      action: none
+    hold_action:
+      action: none
+    double_tap_action:
+      action: none
+  - entity: sensor.echo_dot_example_memory_available
+    tap_action:
+      action: none
+    hold_action:
+      action: none
+    double_tap_action:
+      action: none
+  - entity: sensor.echo_dot_example_free_space
+    tap_action:
+      action: none
+    hold_action:
+      action: none
+    double_tap_action:
+      action: none
+  - entity: sensor.echo_dot_example_load_average
+    tap_action:
+      action: none
+    hold_action:
+      action: none
+    double_tap_action:
+      action: none
+  - entity: sensor.echo_dot_example_cpu_temperature
+    tap_action:
+      action: none
+    hold_action:
+      action: none
+    double_tap_action:
+      action: none
+  - entity: sensor.echo_dot_example_radio_temperature
+    tap_action:
+      action: none
+    hold_action:
+      action: none
+    double_tap_action:
+      action: none
+  - entity: sensor.echo_dot_example_lux
+    tap_action:
+      action: none
+    hold_action:
+      action: none
+    double_tap_action:
+      action: none
+  - entity: sensor.echo_dot_example_microphone_ambient_noise
+    tap_action:
+      action: none
+    hold_action:
+      action: none
+    double_tap_action:
+      action: none
+  - entity: sensor.echo_dot_example_ble_advertisements
+    tap_action:
+      action: none
+    hold_action:
+      action: none
+    double_tap_action:
+      action: none
+  - entity: sensor.echo_dot_example_playback_sendspin_state
+    tap_action:
+      action: none
+    hold_action:
+      action: none
+    double_tap_action:
+      action: none
+  - entity: sensor.echo_dot_example_update_status
+    tap_action:
+      action: none
+    hold_action:
+      action: none
+    double_tap_action:
+      action: none
+  - entity: sensor.echo_dot_example_phone
+    tap_action:
+      action: none
+    hold_action:
+      action: none
+    double_tap_action:
+      action: none

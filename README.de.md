@@ -13,3 +13,5 @@ Vorbereitung und Cache-Reparatur sind separat dokumentiert. Alte vollständige A
 Ausführliche Anleitungen sind derzeit auf Englisch: [Status](docs/status.md), [Migration](docs/migration.md), [Wake Word](docs/wake-word.md), [Home Assistant](docs/home-assistant.md), [Abnahme](docs/acceptance.md).
 
 [Update auf v1.0.35 über HA](docs/updates.md).
+
+Siehe [Funktionsübersicht und Erweiterungsplan](docs/capabilities.md) mit Aktionskatalog und Diagnosekarte (auf Englisch).
