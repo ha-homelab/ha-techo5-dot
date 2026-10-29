@@ -53,20 +53,29 @@ See the [setup and operating guide](capability-package.md) for defaults,
 physical acceptance checks, ownership rules and limitations. An available
 firmware update does not disable these controls; an update in progress does.
 
-## Access that still requires the owner
+## Web access and house links
 
 Native web setup requires an actual Action-button press to admit the waiting
-browser. This is separate from authorized SSH access. The signed Remote API
-also requires a key created through that admitted session. The
-[read-only API client](../scripts/remote_status.py) and protocol/transport tests
-are provided, but a live signed API request is not considered verified without
-that key. The setup and key steps are in the [access guide](capability-access.md).
+browser. This is separate from authorized SSH access. The owner admitted the
+browser and created a Remote API key. It was saved only in the ignored private
+directory with mode 0600. The [read-only API client](../scripts/remote_status.py)
+successfully made signed device and entity requests; the live inventory
+contained 169 parameters. The setup and key steps are in the
+[access guide](capability-access.md).
 
 Native house features need the same private house word on both devices.
-Enabling nearest-answer switches alone does not establish this shared
-credential. Until both are configured through admitted setup, authenticated
-house arbitration, house settings sharing and direct house intercom remain
-unverified. The existing PBX route is independent of that credential.
+The owner saved the same phrase through both admitted setup pages; both pages
+then confirmed a configured word. Nearest-answer settings remain enabled on
+both Dots. In the subsequent real wake-word check, the owner heard one Dot
+respond. The available first-Dot log shows its local answering decision; it
+does not prove that both microphones heard that particular utterance. A
+verified peer-yield log would provide stronger arbitration evidence.
+
+House settings sharing and Drop-in remain off. Direct house intercom is
+configured but two-way audio has not been tested. The existing PBX route is
+independent of the house credential. In this build, the House word form is
+under **Sound & Voice → Announcements**, despite older UI text referring to
+Connections.
 
 Drop-in, continuous microphone streaming and stored wake clips remain off.
 They are not prerequisites for the controls above. Telnet adds no useful
@@ -81,6 +90,26 @@ entity readback and limited reversible control checks are separate from
 acoustic acceptance. Receiver discovery is not proof of uninterrupted music;
 PBX registration is not proof of intelligible two-way audio. Test those with a
 person present before enabling recurring or sound-triggered household actions.
+
+The installed package passed HA configuration checks and all 105 template
+renders. Live checks verified timer pause/resume/extension/cancellation,
+alarm and reminder creation/disable/deletion, and ring restoration. No test
+alarm or timer remained. A firmware-specific RGB reporting difference was
+found during that test: feedback includes the selected brightness. Comparing
+color proportions separately from brightness fixed scene ownership and is
+covered by regression tests.
+
+The card was added beside the existing Dot controls in the audio-player view.
+Additional controls and availability notices were enabled. Clap lighting,
+Action-hold scenes and periodic energy scenes remain explicit opt-ins. The
+normal wake model, threshold, microphone frontend and playback route were
+preserved. HA was independently restarted for an Echo Show deployment during
+this work; no additional HA or Dot restart was requested for this package.
+
+All 47 repository tests passed, including real HTTP signing/redirect tests
+against a local test server and the observed brightness-scaled RGB regression.
+The live card references 53 available entities. The final native-settings
+comparison found only the explicitly selected feature changes.
 
 Private receipts include the before/after native settings, USB-verified SSH
 host identity, package hash, HA configuration check, template results,

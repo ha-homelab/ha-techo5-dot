@@ -57,6 +57,24 @@ Some TECHO5 platforms with built-in Tailscale expose **Remote setup** and
 Dot. Do not assume that instructions for a Show or Spot provide remote
 admission on a Dot.
 
+### House word for announcements and native intercom
+
+On the verified v1.0.40 Dot setup page, open **Sound & Voice → Announcements**,
+enter **House word**, and choose **Save**. Some help text still points to
+Connections; the field is under Sound & Voice in this version.
+
+Use the same private, hard-to-guess value of at least 16 characters on both
+devices, including identical capitalization. Treat it as a shared credential
+and keep it out of screenshots, logs and the public repository. This setting
+authenticates announcements and native device-to-device intercom; the spoken
+wake phrase is configured separately. An empty House word leaves these
+incoming features disabled, and different values prevent the devices from
+accepting each other's messages.
+
+Enter it through the normally admitted setup session on each Dot. Changing
+one device does not populate the other device's credential. This requirement
+is separate from the account used for calls through a SIP/PBX server.
+
 ## Optional signed remote API
 
 Home Assistant's encrypted ESPHome integration already controls the device.

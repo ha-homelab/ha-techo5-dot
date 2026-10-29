@@ -97,6 +97,10 @@ restores the snapshot only if the ring has received **no intervening state
 update**. It never rolls back a later manual change just because the apparent
 color looks similar. Concurrent ring-scene requests are ignored.
 
+The Dot reports RGB values scaled by brightness. The ownership check compares
+color proportions and brightness separately, so dim colors still restore
+correctly; a stale report, different hue or later state update does not qualify.
+
 This is deliberately conservative: a changed ring, a long priority activity,
 an interrupted script or an HA restart can prevent restoration. Dynamic
 snapshots do not survive HA restart. **Clear manual ring** is an explicit

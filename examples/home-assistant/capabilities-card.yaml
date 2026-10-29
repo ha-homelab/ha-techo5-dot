@@ -544,6 +544,16 @@
           }
         }
       ]
+    },
+    {
+      "type": "entities",
+      "title": "Administration",
+      "show_header_toggle": false,
+      "entities": [
+        "switch.echo_dot_example_ssh",
+        "switch.echo_dot_example_setup_page",
+        "switch.echo_dot_example_remote_api"
+      ]
     }
   ]
 }

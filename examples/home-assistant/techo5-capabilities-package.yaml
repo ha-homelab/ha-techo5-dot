@@ -195,7 +195,7 @@
           }
         },
         {
-          "wait_template": "{{ is_state('light.echo_dot_example_ring_led_ring', 'on') and as_timestamp(states['light.echo_dot_example_ring_led_ring'].last_updated) > previous_update|float and (state_attr('light.echo_dot_example_ring_led_ring', 'brightness')|int - level|int)|abs <= 1 and state_attr('light.echo_dot_example_ring_led_ring', 'rgb_color') is not none and (state_attr('light.echo_dot_example_ring_led_ring', 'rgb_color')[0] - rgb[0])|abs <= 2 and (state_attr('light.echo_dot_example_ring_led_ring', 'rgb_color')[1] - rgb[1])|abs <= 2 and (state_attr('light.echo_dot_example_ring_led_ring', 'rgb_color')[2] - rgb[2])|abs <= 2 }}",
+          "wait_template": "{% set raw = state_attr('light.echo_dot_example_ring_led_ring', 'rgb_color') or [] %}{% set reported_max = raw|max|float(0) if raw|length == 3 else 0 %}{% set desired_max = rgb|max|float(0) %}{{ is_state('light.echo_dot_example_ring_led_ring', 'on') and as_timestamp(states['light.echo_dot_example_ring_led_ring'].last_updated) > previous_update|float and (state_attr('light.echo_dot_example_ring_led_ring', 'brightness')|int(0) - level|int)|abs <= 1 and reported_max > 0 and desired_max > 0 and (raw[0]/reported_max - rgb[0]/desired_max)|abs <= 0.05 and (raw[1]/reported_max - rgb[1]/desired_max)|abs <= 0.05 and (raw[2]/reported_max - rgb[2]/desired_max)|abs <= 0.05 }}",
           "timeout": "00:00:03",
           "continue_on_timeout": true
         },
