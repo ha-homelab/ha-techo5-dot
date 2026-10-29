@@ -32,8 +32,85 @@ index 3856183..379ad54 100644
  	err := st.write()
  	var renamed afterRename
  	switch {
+diff --git a/echod/internal/feature/media/pause_hold_test.go b/echod/internal/feature/media/pause_hold_test.go
+index fb2e3c8..24f36a9 100644
+--- a/echod/internal/feature/media/pause_hold_test.go
++++ b/echod/internal/feature/media/pause_hold_test.go
+@@ -11,6 +11,7 @@ import (
+ 
+ 	"github.com/HuskerMinion/techo5/echod/internal/config"
+ 	"github.com/HuskerMinion/techo5/echod/internal/hardware/speaker"
++	"github.com/HuskerMinion/techo5/echod/internal/lib/activitygate"
+ )
+ 
+ // other is a second background, the way Music Assistant's stream is one: it records nothing, it only
+@@ -163,3 +164,64 @@ func TestTheDuckLevelIsTheOneAskedFor(t *testing.T) {
+ 		}
+ 	}
+ }
++
++// Guarded speech explicitly ducks music even when ordinary assistant turns are
++// configured to pause it. A separate pause request still owns its suppression.
++func TestGuardedDuckBypassesTurnPauseWithoutChangingPreference(t *testing.T) {
++	config.Use(filepath.Join(t.TempDir(), "state.json"))
++	if err := config.Set().Media().OnTurn(config.OnTurnPause); err != nil {
++		t.Fatal(err)
++	}
++	p := speaker.New()
++	d := speaker.NewDriver(p)
++	a := d.Backgrounds()
++	s := NewStream(d, p, func() {}, func(string) {})
++	a.Took(s)
++	l, reason := activitygate.Device.Reserve(time.Now().Add(5*time.Second), func() string {
++		if !a.GuardedMusicReady(p) {
++			return "not ready"
++		}
++		return ""
++	})
++	if l == nil {
++		t.Fatal(reason)
++	}
++	defer l.Release()
++	started, finish := make(chan struct{}), make(chan struct{})
++	c := d.ClaimGuardedDuck(l, func(context.Context, *speaker.Player) error { close(started); <-finish; return nil })
++	<-started
++	s.mu.Lock()
++	holds, duckHeld := s.holds, s.duckHeld
++	s.mu.Unlock()
++	s.write.Lock()
++	target := s.target
++	s.write.Unlock()
++	if holds != 0 || duckHeld || target >= 1 {
++		t.Fatal("explicit duck paused music", holds, duckHeld, target)
++	}
++	// A later ordinary request coexists with the announcement token. Once the
++	// announcement releases its token, the normal pause preference takes effect.
++	a.Duck("ordinary-owner", true)
++	close(finish)
++	select {
++	case <-c.Done():
++	case <-time.After(2 * time.Second):
++		t.Fatal("claim did not finish")
++	}
++	s.mu.Lock()
++	holds, duckHeld = s.holds, s.duckHeld
++	s.mu.Unlock()
++	if holds != 1 || !duckHeld {
++		t.Fatal("ordinary pause ownership lost", holds, duckHeld)
++	}
++	a.Duck("ordinary-owner", false)
++	s.mu.Lock()
++	holds, duckHeld = s.holds, s.duckHeld
++	s.mu.Unlock()
++	if holds != 0 || duckHeld {
++		t.Fatal("pause did not restore", holds, duckHeld)
++	}
++	if config.Get().Media.OnTurn != config.OnTurnPause {
++		t.Fatal("changed user preference")
++	}
++}
 diff --git a/echod/internal/feature/media/stream.go b/echod/internal/feature/media/stream.go
-index f311bd4..b722be3 100644
+index f311bd4..a664f25 100644
 --- a/echod/internal/feature/media/stream.go
 +++ b/echod/internal/feature/media/stream.go
 @@ -6,6 +6,7 @@ import (
@@ -44,7 +121,36 @@ index f311bd4..b722be3 100644
  	"io"
  	"log/slog"
  	"math"
-@@ -379,6 +380,12 @@ func (m *Stream) markLive(url string) bool {
+@@ -166,13 +167,26 @@ const rampSamples = speaker.Rate * speaker.Channels * 60 / 1000
+ // What it does about it is this end's decision, because only this end knows the difference between a
+ // song and a doorbell. A track lowers itself and keeps playing; anyone who would rather have silence
+ // under a reply sets it to pause, and then this is the same suspend a claim would have done.
+-func (m *Stream) Duck(db int) {
++func (m *Stream) Duck(db int) { m.duck(db, false) }
++
++// DuckMusic is an explicit guarded-announcement policy, independent of the
++// normal voice-turn pause preference. It never changes that preference.
++func (m *Stream) DuckMusic(db int) { m.duck(db, true) }
++func (m *Stream) OwnsMusicOutput(p *speaker.Player) bool {
++	if m == nil || !m.out.BelongsTo(p) || !p.MusicSourceIs(nil) {
++		return false
++	}
++	m.mu.Lock()
++	defer m.mu.Unlock()
++	return !m.duckHeld && m.holds == 0 && !m.paused
++}
++func (m *Stream) duck(db int, forceMusic bool) {
+ 	if m == nil {
+ 		return
+ 	}
+ 
+ 	if db < 0 {
+-		if config.Get().Media.OnTurn == config.OnTurnPause {
++		if !forceMusic && config.Get().Media.OnTurn == config.OnTurnPause {
+ 			// Once per turn: a second wake or a follow-up would suspend again, and the single
+ 			// release at the end would leave a hold behind — a stream that never plays again.
+ 			m.mu.Lock()
+@@ -379,6 +393,12 @@ func (m *Stream) markLive(url string) bool {
  func (m *Stream) start(t *track) (*track, context.Context) {
  	ctx, cancel := context.WithCancel(context.Background())
  	t.cancel = cancel
@@ -158,6 +264,70 @@ index 8013ca6..37b2250 100644
  	state.mu.Lock()
  	state.sounding++
  	state.mu.Unlock()
+diff --git a/echod/internal/feature/sendspin/output.go b/echod/internal/feature/sendspin/output.go
+index 72f76b9..1785e32 100644
+--- a/echod/internal/feature/sendspin/output.go
++++ b/echod/internal/feature/sendspin/output.go
+@@ -417,3 +417,14 @@ func scale(s int16, gain float32) int16 {
+ 	}
+ 	return int16(max(math.MinInt16, min(float64(s)*float64(gain), math.MaxInt16)))
+ }
++
++// Guarded announcements use the same native source gain as ordinary ducking.
++func (o *out) DuckMusic(db int) { o.Duck(db) }
++func (o *out) OwnsMusicOutput(p *speaker.Player) bool {
++	if o.p != p || !p.MusicSourceIs(o) {
++		return false
++	}
++	o.mu.Lock()
++	defer o.mu.Unlock()
++	return o.ready && !o.held
++}
+diff --git a/echod/internal/feature/sendspin/output_test.go b/echod/internal/feature/sendspin/output_test.go
+index 098067f..b0cf19e 100644
+--- a/echod/internal/feature/sendspin/output_test.go
++++ b/echod/internal/feature/sendspin/output_test.go
+@@ -293,3 +293,40 @@ func TestAStreamThatEndsHeldForgetsTheHold(t *testing.T) {
+ 		t.Fatal("a closed stream kept the hold on it")
+ 	}
+ }
++
++func TestGuardedMusicRequiresOwnReadyLocalSource(t *testing.T) {
++	p := speaker.New()
++	o := newOut(p)
++	p.Attach(o)
++	if o.OwnsMusicOutput(p) {
++		t.Fatal("unready source accepted")
++	}
++	o.ready = true
++	if !o.OwnsMusicOutput(p) {
++		t.Fatal("own ready source rejected")
++	}
++	o.held = true
++	if o.OwnsMusicOutput(p) {
++		t.Fatal("suspended source accepted")
++	}
++	o.held = false
++	if o.OwnsMusicOutput(speaker.New()) {
++		t.Fatal("unrelated player accepted")
++	}
++	p.Attach(newOut(p))
++	if o.OwnsMusicOutput(p) {
++		t.Fatal("unrelated source accepted")
++	}
++	p.Attach(nil)
++	if o.OwnsMusicOutput(p) {
++		t.Fatal("missing source accepted")
++	}
++	o.DuckMusic(-15)
++	if o.gain <= 0 || o.gain >= 1 || o.held {
++		t.Fatal("duck should attenuate without pausing", o.gain, o.held)
++	}
++	o.DuckMusic(0)
++	if o.gain != 1 || o.held {
++		t.Fatal("duck did not restore", o.gain, o.held)
++	}
++}
 diff --git a/echod/internal/feature/sendspin/session.go b/echod/internal/feature/sendspin/session.go
 index 39254f9..37d1dac 100644
 --- a/echod/internal/feature/sendspin/session.go
@@ -274,10 +444,10 @@ index 5fb03fb..118c122 100644
  	// A wake the device's own engine was sure of: the word is being said the way it hears it, so what
 diff --git a/echod/internal/feature/voice/guarded_announce.go b/echod/internal/feature/voice/guarded_announce.go
 new file mode 100644
-index 0000000..ab01f06
+index 0000000..48fc96d
 --- /dev/null
 +++ b/echod/internal/feature/voice/guarded_announce.go
-@@ -0,0 +1,184 @@
+@@ -0,0 +1,212 @@
 +package voice
 +
 +import (
@@ -316,7 +486,9 @@ index 0000000..ab01f06
 +
 +// guardedIdle is called under the exclusive admission barrier. Every competing
 +// activity publishes its non-idle state while holding the shared barrier.
-+func (v *Voice) guardedIdle() string {
++func (v *Voice) guardedIdle() string     { return v.guardedIdlePolicy(false) }
++func (v *Voice) guardedDuckIdle() string { return v.guardedIdlePolicy(true) }
++func (v *Voice) guardedIdlePolicy(duck bool) string {
 +	if ring.IsSounding() {
 +		return "ring_busy"
 +	}
@@ -326,11 +498,24 @@ index 0000000..ab01f06
 +	if v.turn.Busy() || v.turn.guardWatch.Load() {
 +		return "assist_busy"
 +	}
-+	if v.turn.sound.Busy() || !v.turn.speaker.IdleForAnnouncement() || v.turn.sound.Backgrounds().Playing() != nil {
++	if v.turn.sound.Busy() {
 +		return "audio_busy"
 +	}
-+	if v.turn.player.ExternalPlaying() {
-+		return "media_busy"
++	backgrounds := v.turn.sound.Backgrounds()
++	if duck && backgrounds.Playing() != nil {
++		if !v.turn.speaker.ForegroundIdleForAnnouncement() {
++			return "audio_busy"
++		}
++		if !backgrounds.GuardedMusicReady(v.turn.speaker) {
++			return "unsupported_music_output"
++		}
++	} else {
++		if !v.turn.speaker.IdleForAnnouncement() || backgrounds.Playing() != nil {
++			return "audio_busy"
++		}
++		if v.turn.player.ExternalPlaying() {
++			return "media_busy"
++		}
 +	}
 +	if config.Get().Home.DoNotDisturb {
 +		return "do_not_disturb"
@@ -356,8 +541,8 @@ index 0000000..ab01f06
 +	obtain := func() (*guardedannounce.Manager, error) {
 +		return v.guardedManager()
 +	}
-+	return []*esphome.Action{
-+		{Name: "guarded_announcement_submit", Answers: true, Args: []esphome.Arg{{Name: "request_id", Type: esphome.ArgString}, {Name: "media_id", Type: esphome.ArgString}, {Name: "expires_at", Type: esphome.ArgString}}, Run: func(c esphome.Call) (any, error) {
++	submit := func(duck bool) func(esphome.Call) (any, error) {
++		return func(c esphome.Call) (any, error) {
 +			m, err := obtain()
 +			if err != nil {
 +				return nil, err
@@ -370,8 +555,17 @@ index 0000000..ab01f06
 +				return nil, errors.New("invalid expires_at")
 +			}
 +			url := c.String("media_id")
-+			return m.Submit(c.String("request_id"), url, expires, func(l *activitygate.Lease, mark func() error) error { return v.playGuarded(l, url, mark) }), nil
-+		}},
++			play := func(l *activitygate.Lease, mark func() error) error { return v.playGuarded(l, url, mark, duck) }
++			if duck {
++				return m.SubmitDuck(c.String("request_id"), url, expires, v.guardedDuckIdle, play), nil
++			}
++			return m.Submit(c.String("request_id"), url, expires, play), nil
++		}
++	}
++	args := []esphome.Arg{{Name: "request_id", Type: esphome.ArgString}, {Name: "media_id", Type: esphome.ArgString}, {Name: "expires_at", Type: esphome.ArgString}}
++	return []*esphome.Action{
++		{Name: "guarded_announcement_submit", Answers: true, Args: args, Run: submit(false)},
++		{Name: "guarded_announcement_submit_duck", Answers: true, Args: args, Run: submit(true)},
 +		{Name: "guarded_announcement_status", Answers: true, Args: id, Run: func(c esphome.Call) (any, error) {
 +			m, e := obtain()
 +			if e != nil {
@@ -394,14 +588,14 @@ index 0000000..ab01f06
 +			if !m.Healthy() {
 +				return nil, errors.New("announcement journal unavailable")
 +			}
-+			return map[string]any{"request_id": c.String("request_id"), "protocol": guardedannounce.Protocol, "boot_id": m.BootID(), "atomic_idle_guard": true, "dedup": true, "owned_cancel": true, "honest_completion": true, "deadline_enforced": true, "preannounce": false, "start_conversation": false, "busy_policy": "skip", "max_duration_seconds": 180}, nil
++			return map[string]any{"request_id": c.String("request_id"), "protocol": guardedannounce.Protocol, "boot_id": m.BootID(), "atomic_idle_guard": true, "dedup": true, "owned_cancel": true, "honest_completion": true, "deadline_enforced": true, "preannounce": false, "start_conversation": false, "busy_policy": "skip", "duck_music": true, "busy_policies": []string{"skip", "duck_music"}, "max_duration_seconds": 180}, nil
 +		}},
 +	}
 +}
 +
 +// playGuarded owns the exclusive gate until it returns, including cancellation
 +// drain. It never calls phone.Say, cancels an Assist pipeline, or opens a mic.
-+func (v *Voice) playGuarded(l *activitygate.Lease, url string, mark func() error) error {
++func (v *Voice) playGuarded(l *activitygate.Lease, url string, mark func() error, duck bool) error {
 +	monitorDone := make(chan struct{})
 +	defer close(monitorDone)
 +	go func() {
@@ -439,7 +633,11 @@ index 0000000..ab01f06
 +	if err != nil {
 +		return err
 +	}
-+	c := v.turn.sound.ClaimGuarded(l, func(ctx context.Context, p *speaker.Player) error {
++	claim := v.turn.sound.ClaimGuarded
++	if duck {
++		claim = v.turn.sound.ClaimGuardedDuck
++	}
++	c := claim(l, func(ctx context.Context, p *speaker.Player) error {
 +		if err := ctx.Err(); err != nil {
 +			return err
 +		}
@@ -451,7 +649,7 @@ index 0000000..ab01f06
 +		}
 +		p.PlayVoice(media.ForSpeaker(media.Normalize(samples), nil))
 +		p.PlayVoice(make([]int16, speaker.VoiceRate*media.Tail/1000))
-+		return nil
++		return p.WaitForeground(ctx, proof)
 +	})
 +	<-c.Done()
 +	if c.Err() != nil {
@@ -584,7 +782,7 @@ index 32636ef..28a4981 100644
  
  // ShowEffect puts the effect named name on the ring for the step the running request is in, for an
 diff --git a/echod/internal/hardware/speaker/arbiter.go b/echod/internal/hardware/speaker/arbiter.go
-index c2da187..ac31924 100644
+index c2da187..7788e4c 100644
 --- a/echod/internal/hardware/speaker/arbiter.go
 +++ b/echod/internal/hardware/speaker/arbiter.go
 @@ -2,6 +2,7 @@ package speaker
@@ -595,7 +793,35 @@ index c2da187..ac31924 100644
  	"log/slog"
  	"slices"
  	"sync"
-@@ -53,6 +54,12 @@ func (d *Driver) Backgrounds() *Arbiter {
+@@ -19,6 +20,14 @@ type Producer interface {
+ 	Requeue()
+ }
+ 
++// MusicProducer can mix underneath guarded speech without pausing. It must
++// identify its actual local output; an unrelated external player is insufficient.
++type MusicProducer interface {
++	Producer
++	DuckMusic(db int)
++	OwnsMusicOutput(*Player) bool
++}
++
+ // Arbiter is the one Background the driver holds, standing in for however many there are. The newest
+ // plays and the rest wait in order behind it, so when a track ends the stream it interrupted carries on.
+ type Arbiter struct {
+@@ -29,8 +38,10 @@ type Arbiter struct {
+ 	// an announcement, a camera's own sound. The deepest ask is the one heard — a camera silenced under
+ 	// a turn's ducking would be no quieter than the turn — and it stays down until the last of them
+ 	// lets go, so one ending does not bring the music back up under another.
+-	duck  int
+-	ducks map[string]int
++	duck       int
++	ducks      map[string]int
++	musicDucks map[string]bool
++	forceMusic bool
+ 	// duckMu serializes duckTo, which reads ducks under mu and applies the level after letting go of it.
+ 	duckMu sync.Mutex
+ 	// hold is the producer the hold stood down, so a retake by it during the same hold is not
+@@ -53,6 +64,12 @@ func (d *Driver) Backgrounds() *Arbiter {
  
  // Took is a producer starting. Whatever was playing stands down but keeps its place.
  func (a *Arbiter) Took(p Producer) {
@@ -608,8 +834,97 @@ index c2da187..ac31924 100644
  	a.mu.Lock()
  	// A producer under the one being heard was stood down once, by whatever took the speaker over it
  	// or by the hold. Taking the speaker back is where that is undone: nothing else would undo it, and
+@@ -90,6 +107,13 @@ func (a *Arbiter) Took(p Producer) {
+ 
+ // Gave is a producer finishing. Whatever it interrupted picks up again.
+ func (a *Arbiter) Gave(p Producer) {
++	// A resumed underlying producer is a fresh route. End any guarded overlay
++	// before that handover; the completed announcement is never replayed.
++	leave, admitted := activitygate.Device.Enter()
++	if !admitted {
++		return
++	}
++	defer leave()
+ 	a.mu.Lock()
+ 	was := a.top()
+ 	a.drop(p)
+@@ -153,6 +177,9 @@ func (a *Arbiter) Duck(why string, on bool) { a.duckTo(why, duckDB(false), on) }
+ // turn's ducking would be no quieter than the turn. A claim asks at its own level — words at the
+ // listener's, a sound over the music deeper — and keeps asking until it lets go.
+ func (a *Arbiter) duckTo(why string, db int, on bool) {
++	a.duckPolicy(why, db, on, false)
++}
++func (a *Arbiter) duckPolicy(why string, db int, on, music bool) {
+ 	if !on {
+ 		db = 0
+ 	}
+@@ -166,6 +193,15 @@ func (a *Arbiter) duckTo(why string, db int, on bool) {
+ 	if a.ducks == nil {
+ 		a.ducks = map[string]int{}
+ 	}
++	if a.musicDucks == nil {
++		a.musicDucks = map[string]bool{}
++	}
++	if on && music {
++		a.musicDucks[why] = true
++	} else {
++		delete(a.musicDucks, why)
++	}
++	forceMusic := len(a.musicDucks) > 0
+ 	if db >= 0 {
+ 		delete(a.ducks, why)
+ 	} else {
+@@ -176,24 +212,30 @@ func (a *Arbiter) duckTo(why string, db int, on bool) {
+ 		deepest = min(deepest, level)
+ 	}
+ 	a.mu.Unlock()
+-	a.setDuck(deepest)
++	a.setDuckPolicy(deepest, forceMusic)
+ }
+ 
+ // setDuck quietens everything, waiting producers included, so one resuming mid-turn comes back quiet.
+-func (a *Arbiter) setDuck(db int) {
++func (a *Arbiter) setDuck(db int) { a.setDuckPolicy(db, false) }
++func (a *Arbiter) setDuckPolicy(db int, forceMusic bool) {
+ 	a.mu.Lock()
+-	if a.duck == db {
++	if a.duck == db && a.forceMusic == forceMusic {
+ 		a.mu.Unlock()
+ 		return
+ 	}
+ 	was := a.duck
+ 	a.duck = db
++	a.forceMusic = forceMusic
+ 	all := append([]Producer(nil), a.stack...)
+ 	heard := a.top()
+ 	a.mu.Unlock()
+ 
+ 	for _, p := range all {
+-		p.Duck(db)
++		if music, ok := p.(MusicProducer); forceMusic && ok {
++			music.DuckMusic(db)
++		} else {
++			p.Duck(db)
++		}
+ 	}
+ 
+ 	// Only the audible one, or the same samples get attenuated once per producer. Going deeper is
+@@ -234,3 +276,13 @@ func kind(p Producer) string {
+ 	}
+ 	return fmt.Sprintf("%T", p)
+ }
++
++// GuardedMusicReady is called under the exclusive activity lease. Do not hold
++// arbiter locks across producer/output checks: feed threads use those locks too.
++func (a *Arbiter) GuardedMusicReady(out *Player) bool {
++	a.mu.Lock()
++	p, held := a.top(), a.held
++	a.mu.Unlock()
++	music, ok := p.(MusicProducer)
++	return !held && ok && music.OwnsMusicOutput(out)
++}
 diff --git a/echod/internal/hardware/speaker/driver.go b/echod/internal/hardware/speaker/driver.go
-index 3097e36..af242b9 100644
+index 3097e36..fb661ca 100644
 --- a/echod/internal/hardware/speaker/driver.go
 +++ b/echod/internal/hardware/speaker/driver.go
 @@ -3,6 +3,7 @@ package speaker
@@ -628,11 +943,12 @@ index 3097e36..af242b9 100644
  	over  bool // sounds over the background rather than standing it down
  	waits bool // waits for whatever holds the speaker rather than displacing it
  	deep  bool // ducks deeper than words: a sound whose own level is low, heard over the room's music
-@@ -142,7 +144,22 @@ type claimSpec struct {
+@@ -142,8 +144,23 @@ type claimSpec struct {
  }
  
  func (d *Driver) claim(name string, spec claimSpec, play func(ctx context.Context, p *Player) error) *Claim {
 -	ctx, cancel := context.WithCancel(context.Background())
+-	c := &Claim{name: name, over: spec.over, overlay: spec.overlay, cancel: cancel, done: make(chan struct{})}
 +	var leave func()
 +	if spec.guard == nil {
 +		var admitted bool
@@ -649,26 +965,34 @@ index 3097e36..af242b9 100644
 +		parent = spec.guard.Context()
 +	}
 +	ctx, cancel := context.WithCancel(parent)
- 	c := &Claim{name: name, over: spec.over, overlay: spec.overlay, cancel: cancel, done: make(chan struct{})}
++	c := &Claim{forceMusic: spec.guard != nil && spec.over, name: name, over: spec.over, overlay: spec.overlay, cancel: cancel, done: make(chan struct{})}
  	if spec.over {
  		// Only a claim that sounds over the background ducks anything, and working out how far is the
-@@ -177,6 +194,15 @@ func (d *Driver) claim(name string, spec claimSpec, play func(ctx context.Contex
+ 		// only thing here that reads the listener's setting. A plain claim must not read it: a ring left
+@@ -177,10 +194,18 @@ func (d *Driver) claim(name string, spec claimSpec, play func(ctx context.Contex
  
  	go func() {
  		defer close(c.done)
-+		if spec.guard != nil {
-+			// The exclusive owner clears its own queue before ordinary activity resumes.
-+			defer func() {
-+				if ctx.Err() != nil {
-+					d.p.Drain()
-+					time.Sleep(HardwareTail)
-+				}
-+			}()
-+		}
- 		if bg != nil {
- 			defer c.endDuck()
- 		}
-@@ -232,10 +258,15 @@ func (d *Driver) take(ctx context.Context, c *Claim, beside bool) (ok, alongside
+-		if bg != nil {
+-			defer c.endDuck()
+-		}
+-		defer d.release(c)
++		// Keep the exact duck token until owned speech and its hardware tail have
++		// left output. On error/cancellation, only the pending foreground is drained.
++		defer func() {
++			if spec.guard != nil && (ctx.Err() != nil || c.Err() != nil) {
++				d.p.Drain()
++				time.Sleep(HardwareTail)
++			}
++			if bg != nil {
++				c.endDuck()
++			}
++			d.release(c)
++		}()
+ 
+ 		alongside := false
+ 		if spec.waits {
+@@ -232,10 +257,15 @@ func (d *Driver) take(ctx context.Context, c *Claim, beside bool) (ok, alongside
  			return false, false
  		}
  
@@ -684,7 +1008,7 @@ index 3097e36..af242b9 100644
  			// The background's side of holding the speaker is this claim's now, which is what settle
  			// keeps equal to "something holds it" — an over claim holds it without standing the
  			// background down.
-@@ -244,6 +275,7 @@ func (d *Driver) take(ctx context.Context, c *Claim, beside bool) (ok, alongside
+@@ -244,6 +274,7 @@ func (d *Driver) take(ctx context.Context, c *Claim, beside bool) (ok, alongside
  		}
  		held := d.now
  		d.mu.Unlock()
@@ -692,7 +1016,7 @@ index 3097e36..af242b9 100644
  		if beside && held.overlay && !held.Finished() {
  			return true, true
  		}
-@@ -301,11 +333,19 @@ func (d *Driver) settle() {
+@@ -301,11 +332,19 @@ func (d *Driver) settle() {
  // Interject makes a sound without taking the speaker from what has it. Short feedback — a volume
  // beep, a mute tone — is worth hearing, and not worth losing a reply over: it goes into the queue
  // behind whatever is already there rather than replacing it.
@@ -713,7 +1037,46 @@ index 3097e36..af242b9 100644
  	d.mu.Lock()
  	c := d.now
  	d.now = nil
-@@ -577,3 +617,15 @@ func (c *Claim) fail(err error) {
+@@ -385,8 +424,9 @@ type Claim struct {
+ 
+ 	// duck is how far down this claim asks the background to be, and bg the background to ask, for one
+ 	// that sounds over it. Muting lets it back up rather than leaving the room quiet and ducked at once.
+-	duck int
+-	bg   *Arbiter
++	duck       int
++	forceMusic bool
++	bg         *Arbiter
+ 
+ 	// duckMu keeps the claim's own duck in step with what it is doing: it ducks only once it has the
+ 	// speaker (active), not while muted, and never again once it has ended. A mute that arrives while
+@@ -424,7 +464,7 @@ func (c *Claim) Mute(on bool) {
+ 	defer c.duckMu.Unlock()
+ 	c.duckMuted = on
+ 	if c.duckActive && !c.duckEnded {
+-		c.bg.duckTo(c.duckName(), c.duck, !on)
++		c.bg.duckPolicy(c.duckName(), c.duck, !on, c.forceMusic)
+ 	}
+ }
+ 
+@@ -435,7 +475,7 @@ func (c *Claim) startDuck() {
+ 	defer c.duckMu.Unlock()
+ 	c.duckActive = true
+ 	if !c.duckMuted && !c.duckEnded {
+-		c.bg.duckTo(c.duckName(), c.duck, true)
++		c.bg.duckPolicy(c.duckName(), c.duck, true, c.forceMusic)
+ 	}
+ }
+ 
+@@ -444,7 +484,7 @@ func (c *Claim) endDuck() {
+ 	c.duckMu.Lock()
+ 	defer c.duckMu.Unlock()
+ 	c.duckEnded = true
+-	c.bg.duckTo(c.duckName(), c.duck, false)
++	c.bg.duckPolicy(c.duckName(), c.duck, false, c.forceMusic)
+ }
+ 
+ // Preempted is whether another claim took the speaker from this one, rather than it being silenced
+@@ -577,3 +617,21 @@ func (c *Claim) fail(err error) {
  	defer c.mu.Unlock()
  	c.err = err
  }
@@ -723,6 +1086,12 @@ index 3097e36..af242b9 100644
 +func (d *Driver) ClaimGuarded(l *activitygate.Lease, play func(context.Context, *Player) error) *Claim {
 +	return d.claim("guarded announcement", claimSpec{guard: l}, play)
 +}
++
++// ClaimGuardedDuck keeps the existing native music producer running underneath
++// speech. Admission already proved its local route and excluded other activity.
++func (d *Driver) ClaimGuardedDuck(l *activitygate.Lease, play func(context.Context, *Player) error) *Claim {
++	return d.claim("guarded announcement", claimSpec{guard: l, over: true}, play)
++}
 +func rejectedClaim(name string) *Claim {
 +	c := &Claim{name: name, done: make(chan struct{}), stopped: true, err: fmt.Errorf("announcement admission busy")}
 +	c.cancel = func() {}
@@ -731,15 +1100,18 @@ index 3097e36..af242b9 100644
 +}
 diff --git a/echod/internal/hardware/speaker/guarded_test.go b/echod/internal/hardware/speaker/guarded_test.go
 new file mode 100644
-index 0000000..c55827a
+index 0000000..77c6ddd
 --- /dev/null
 +++ b/echod/internal/hardware/speaker/guarded_test.go
-@@ -0,0 +1,63 @@
+@@ -0,0 +1,301 @@
 +package speaker
 +
 +import (
 +	"context"
++	"errors"
++	"github.com/HuskerMinion/techo5/echod/internal/config"
 +	"github.com/HuskerMinion/techo5/echod/internal/lib/activitygate"
++	"path/filepath"
 +	"sync/atomic"
 +	"testing"
 +	"time"
@@ -798,6 +1170,241 @@ index 0000000..c55827a
 +		t.Fatal("hardware tail ignored")
 +	}
 +}
++
++// These tests use only in-memory queues: no audio device is opened.
++type guardedMusic struct {
++	producer
++	p      *Player
++	forced atomic.Bool
++}
++
++func (m *guardedMusic) DuckMusic(db int)               { m.forced.Store(true); m.Duck(db) }
++func (m *guardedMusic) OwnsMusicOutput(p *Player) bool { return m.p == p && p.MusicSourceIs(nil) }
++
++func TestGuardedDuckKeepsMusicAndRestoresAfterOwnedDrain(t *testing.T) {
++	for _, end := range []string{"complete", "cancel", "error", "preempt"} {
++		t.Run(end, func(t *testing.T) {
++			config.Use(filepath.Join(t.TempDir(), "config.json"))
++			if err := config.Set().Media().DuckDB(-15); err != nil {
++				t.Fatal(err)
++			}
++			p := New()
++			d := NewDriver(p)
++			music := &guardedMusic{p: p}
++			a := d.Backgrounds()
++			a.Took(music)
++			p.bed = []int16{7, 7, 7, 7}
++			volume := p.Volume()
++			l, reason := activitygate.Device.Reserve(time.Now().Add(5*time.Second), func() string {
++				if !a.GuardedMusicReady(p) {
++					return "bad route"
++				}
++				return ""
++			})
++			if l == nil {
++				t.Fatal(reason)
++			}
++			defer l.Release()
++			started, finish := make(chan struct{}), make(chan struct{})
++			c := d.ClaimGuardedDuck(l, func(ctx context.Context, p *Player) error {
++				if !music.quiet() || music.held() || !music.forced.Load() {
++					t.Error("music was not ducked continuously")
++				}
++				if end != "complete" {
++					p.mu.Lock()
++					p.pending = []int16{3, 3}
++					p.mu.Unlock()
++				}
++				close(started)
++				if end == "cancel" || end == "preempt" {
++					<-ctx.Done()
++					return ctx.Err()
++				}
++				<-finish
++				if end == "error" {
++					return errors.New("failed after queue")
++				}
++				return nil
++			})
++			<-started
++			switch end {
++			case "cancel":
++				l.Cancel("requested")
++			case "preempt":
++				go func() { <-c.Done(); l.Release() }()
++				leave, ok := activitygate.Device.Enter()
++				if !ok {
++					t.Fatal("failed to preempt")
++				}
++				leave()
++			default:
++				close(finish)
++			}
++			if end == "cancel" || end == "error" {
++				time.Sleep(HardwareTail / 3)
++				if !music.quiet() {
++					t.Error("restored music before speech hardware tail")
++				}
++			}
++			waitFor(t, c)
++			if music.quiet() || music.held() {
++				t.Fatal("music gain/hold leaked")
++			}
++			if p.Queued() != 0 || len(p.bed) != 4 {
++				t.Fatal("owned drain touched music or left speech")
++			}
++			if p.Volume() != volume {
++				t.Fatal("changed user volume")
++			}
++		})
++	}
++}
++func TestGuardedDuckKeepsOtherDuckOwner(t *testing.T) {
++	config.Use(filepath.Join(t.TempDir(), "config.json"))
++	p := New()
++	d := NewDriver(p)
++	music := &guardedMusic{p: p}
++	a := d.Backgrounds()
++	a.Took(music)
++	a.duckTo("independent", -30, true)
++	l, _ := activitygate.Device.Reserve(time.Now().Add(5*time.Second), func() string { return "" })
++	defer l.Release()
++	c := d.ClaimGuardedDuck(l, func(context.Context, *Player) error { return nil })
++	waitFor(t, c)
++	music.mu.Lock()
++	db := music.db
++	music.mu.Unlock()
++	if db != -30 {
++		t.Fatal("removed independent duck", db)
++	}
++	a.duckTo("independent", -30, false)
++	if music.quiet() {
++		t.Fatal("independent release failed")
++	}
++}
++func TestPlaybackProofRequiresOwnedSpeechWrites(t *testing.T) {
++	before := PlaybackProof{Epoch: 1, Written: 100, ForegroundQueued: 10, ForegroundWritten: 10}
++	after := before
++	after.Written += 48000
++	if verifyPlayback(before, after, 0) == nil {
++		t.Fatal("music-only writes counted as speech")
++	}
++	after.ForegroundQueued += 320
++	after.ForegroundWritten += 320
++	if err := verifyPlayback(before, after, 0); err != nil {
++		t.Fatal(err)
++	}
++	for _, kind := range []string{"missing", "restart", "dropped", "underrun", "pending"} {
++		t.Run(kind, func(t *testing.T) {
++			bad := after
++			pending := 0
++			switch kind {
++			case "missing":
++				bad.ForegroundWritten--
++			case "restart":
++				bad.Epoch++
++			case "dropped":
++				bad.Dropped++
++			case "underrun":
++				bad.Underruns++
++			case "pending":
++				pending = 1
++			}
++			if verifyPlayback(before, bad, pending) == nil {
++				t.Fatal("invalid output accepted")
++			}
++		})
++	}
++}
++func TestAnnouncementDuckIdleExcludesOnlyOwnedForeground(t *testing.T) {
++	p := New()
++	p.bed = []int16{1, 1}
++	p.lastAudibleNano.Store(time.Now().UnixNano())
++	if !p.ForegroundIdleForAnnouncement() || p.IdleForAnnouncement() {
++		t.Fatal("music not distinguished from speech")
++	}
++	for _, lane := range []*[]int16{&p.pending, &p.bell, &p.under} {
++		*lane = []int16{1, 1}
++		if p.ForegroundIdleForAnnouncement() {
++			t.Error("foreground lane ignored")
++		}
++		*lane = nil
++	}
++	p.lastForegroundNano.Store(time.Now().UnixNano())
++	if p.ForegroundIdleForAnnouncement() {
++		t.Error("speech tail ignored")
++	}
++	p.lastForegroundNano.Store(0)
++	a := NewDriver(p).Backgrounds()
++	a.Took(&producer{})
++	if a.GuardedMusicReady(p) {
++		t.Error("unknown producer accepted")
++	}
++}
++
++type guardedSource struct{ guardedMusic }
++
++func (m *guardedSource) Render(_ uint64, out []int16) {
++	for i := range out {
++		out[i] = 2
++	}
++}
++func (m *guardedSource) OwnsMusicOutput(p *Player) bool { return m.p == p && p.MusicSourceIs(m) }
++func TestGuardedDuckFinishesWithContinuousSource(t *testing.T) {
++	config.Use(filepath.Join(t.TempDir(), "config.json"))
++	p := New()
++	d := NewDriver(p)
++	src := &guardedSource{guardedMusic: guardedMusic{p: p}}
++	p.Attach(src)
++	d.Backgrounds().Took(src)
++	l, reason := activitygate.Device.Reserve(time.Now().Add(5*time.Second), func() string {
++		if !d.Backgrounds().GuardedMusicReady(p) {
++			return "bad source"
++		}
++		return ""
++	})
++	if l == nil {
++		t.Fatal(reason)
++	}
++	defer l.Release()
++	c := d.ClaimGuardedDuck(l, func(context.Context, *Player) error { return nil })
++	waitFor(t, c)
++	if !p.MusicSourceIs(src) || src.quiet() || src.held() {
++		t.Fatal("continuous source changed at completion")
++	}
++	if p.IdleForAnnouncement() {
++		t.Fatal("continuous source should still be active")
++	}
++}
++func TestGuardedMusicRouteChangeWaitsForCleanup(t *testing.T) {
++	for _, kind := range []string{"source", "producer"} {
++		t.Run(kind, func(t *testing.T) {
++			config.Use(filepath.Join(t.TempDir(), "config.json"))
++			p := New()
++			d := NewDriver(p)
++			a := d.Backgrounds()
++			music := &guardedMusic{p: p}
++			a.Took(music)
++			l, _ := activitygate.Device.Reserve(time.Now().Add(5*time.Second), func() string { return "" })
++			defer l.Release()
++			started := make(chan struct{})
++			c := d.ClaimGuardedDuck(l, func(ctx context.Context, _ *Player) error { close(started); <-ctx.Done(); return ctx.Err() })
++			<-started
++			go func() { <-c.Done(); l.Release() }()
++			if kind == "source" {
++				p.Attach(&guardedSource{guardedMusic: guardedMusic{p: p}})
++			} else {
++				a.Gave(music)
++			}
++			if l.Reason() != "preempted" || !c.Finished() {
++				t.Fatal("route changed before owned cleanup")
++			}
++			if music.quiet() {
++				t.Fatal("duck leaked after route change")
++			}
++		})
++	}
++}
 diff --git a/echod/internal/hardware/speaker/sink.go b/echod/internal/hardware/speaker/sink.go
 index 107be40..6f0afa5 100644
 --- a/echod/internal/hardware/speaker/sink.go
@@ -811,21 +1418,53 @@ index 107be40..6f0afa5 100644
  	if s != nil {
  		if channels < 1 || channels > 2 || rate <= 0 {
 diff --git a/echod/internal/hardware/speaker/speaker.go b/echod/internal/hardware/speaker/speaker.go
-index 8120478..db4b5b2 100644
+index 8120478..0f55106 100644
 --- a/echod/internal/hardware/speaker/speaker.go
 +++ b/echod/internal/hardware/speaker/speaker.go
-@@ -177,7 +177,9 @@ type Player struct {
+@@ -17,6 +17,7 @@ import (
+ 	"github.com/HuskerMinion/techo5/echod/internal/component"
+ 	"github.com/HuskerMinion/techo5/echod/internal/config"
+ 	"github.com/HuskerMinion/techo5/echod/internal/layout"
++	"github.com/HuskerMinion/techo5/echod/internal/lib/activitygate"
+ 	"github.com/HuskerMinion/techo5/echod/internal/lib/alsa"
+ 	"github.com/HuskerMinion/techo5/echod/internal/lib/asp"
+ 	"github.com/HuskerMinion/techo5/echod/internal/lib/audio"
+@@ -177,7 +178,13 @@ type Player struct {
  	underruns atomic.Uint64
  
  	// deaf counts what was thrown away for want of a device.
 -	deaf atomic.Uint64
-+	deaf            atomic.Uint64
-+	outputEpoch     atomic.Uint64
-+	lastAudibleNano atomic.Int64
++	deaf               atomic.Uint64
++	outputEpoch        atomic.Uint64
++	lastAudibleNano    atomic.Int64
++	lastForegroundNano atomic.Int64
++	foregroundQueued   atomic.Uint64
++	foregroundRendered atomic.Uint64
++	foregroundWritten  atomic.Uint64
  
  	mu      sync.Mutex
  	pending []int16 // interleaved stereo waiting to go out
-@@ -472,6 +474,7 @@ func (p *Player) unmute() {
+@@ -227,6 +234,19 @@ type Source interface {
+ // Attach sets the Source, or clears it with nil. Only one at a time: two things placing audio by
+ // absolute frame would be two things deciding what the room plays.
+ func (p *Player) Attach(s Source) {
++	p.srcMu.Lock()
++	unchanged := p.src == s
++	p.srcMu.Unlock()
++	if unchanged {
++		return
++	}
++	// Changing a renderer is a new activity; ordinary Render/feed calls remain
++	// ungated so continuous music cannot preempt the announcement it accompanies.
++	leave, admitted := activitygate.Device.Enter()
++	if !admitted {
++		return
++	}
++	defer leave()
+ 	p.srcMu.Lock()
+ 	defer p.srcMu.Unlock()
+ 	p.src = s
+@@ -472,6 +492,7 @@ func (p *Player) unmute() {
  
  // stopped holds the amplifier's mute again as the stream ends, for whatever reason it ends.
  func (p *Player) stopped() {
@@ -833,7 +1472,7 @@ index 8120478..db4b5b2 100644
  	p.playing.Store(false)
  	if MuteSwitch == "" {
  		return
-@@ -523,6 +526,7 @@ func (p *Player) setOutput(out Output) {
+@@ -523,6 +544,7 @@ func (p *Player) setOutput(out Output) {
  		p.pathMu.Unlock()
  		return
  	}
@@ -841,7 +1480,23 @@ index 8120478..db4b5b2 100644
  	p.out = out
  	p.outNow.Store(out)
  	// The tuning's history is of what went out the old way: Headphone to Both starts it again, and
-@@ -812,6 +816,7 @@ func (p *Player) Run(ctx context.Context) error {
+@@ -753,6 +775,7 @@ func (p *Player) Run(ctx context.Context) error {
+ 
+ 		// An amplifier waking from its idle sleep (idle.go) is not ready for what is queued: the queue
+ 		// waits, and the card gets silence, until it is.
++		foregroundBefore := p.foregroundRendered.Load()
+ 		if p.gate != nil && p.idleStep() {
+ 			clear(buf)
+ 		} else {
+@@ -780,6 +803,7 @@ func (p *Player) Run(ctx context.Context) error {
+ 			}
+ 			return err
+ 		}
++		p.foregroundWritten.Add(p.foregroundRendered.Load() - foregroundBefore)
+ 		if !p.playing.Load() {
+ 			if muted++; muted >= unmuteAfter {
+ 				p.playing.Store(true)
+@@ -812,6 +836,7 @@ func (p *Player) Run(ctx context.Context) error {
  // in the format of the output it then has. The format's routes can change what the output's path set
  // (the jack's mutes the amplifier), so the path is written again once the stream is open.
  func (p *Player) reformat(ctx context.Context, pb playback, want cardFormat) (playback, error) {
@@ -849,17 +1504,36 @@ index 8120478..db4b5b2 100644
  	_, mixer := p.device()
  	_ = pb.Close()
  	// Nothing holds a stream until the new one opens, so a Close meanwhile (a shutdown during a wait
-@@ -922,6 +927,9 @@ func (p *Player) fill(buf []byte) {
+@@ -903,6 +928,7 @@ func (p *Player) fill(buf []byte) {
+ 	take := min(len(p.pending), period*Channels)
+ 	chunk := p.pending[:take]
+ 	p.pending = p.pending[take:]
++	p.foregroundRendered.Add(uint64(take / Channels))
+ 	if len(p.pending) == 0 {
+ 		p.pending = nil
+ 	}
+@@ -922,6 +948,12 @@ func (p *Player) fill(buf []byte) {
  	rang := min(len(p.bell), period*Channels)
  	bell := p.bell[:rang]
  	p.bell = p.bell[rang:]
 +	if take > 0 || bedTake > 0 || underTake > 0 || rang > 0 {
 +		p.lastAudibleNano.Store(time.Now().UnixNano())
 +	}
++	if take > 0 || underTake > 0 || rang > 0 {
++		p.lastForegroundNano.Store(time.Now().UnixNano())
++	}
  	if len(p.bell) == 0 {
  		p.bell = nil
  	}
-@@ -1454,6 +1462,7 @@ func (p *Player) Volume() float32 { return math.Float32frombits(p.volume.Load())
+@@ -1126,6 +1158,7 @@ func (p *Player) Play(samples []int16) {
+ 
+ 	p.mu.Lock()
+ 	p.pending = append(p.pending, samples...)
++	p.foregroundQueued.Add(uint64(len(samples) / Channels))
+ 	p.mu.Unlock()
+ }
+ 
+@@ -1454,6 +1487,7 @@ func (p *Player) Volume() float32 { return math.Float32frombits(p.volume.Load())
  // The Player stays usable:
  // Start can take it again, which is how a restart works.
  func (p *Player) Close() error {
@@ -867,28 +1541,68 @@ index 8120478..db4b5b2 100644
  	p.initializeMixer()
  
  	p.devMu.Lock()
-@@ -1569,3 +1578,38 @@ func (p *Player) initializeMixer() {
+@@ -1569,3 +1603,106 @@ func (p *Player) initializeMixer() {
  	}
  	p.apply(initSequence)
  }
 +
 +// PlaybackProof identifies one uninterrupted local output generation. It proves
 +// software drain, not acoustic quality or that a person heard the message.
-+type PlaybackProof struct{ Epoch, Dropped, Underruns, Written uint64 }
++type PlaybackProof struct {
++	Epoch, Dropped, Underruns, Written  uint64
++	ForegroundQueued, ForegroundWritten uint64
++}
 +
 +func (p *Player) PlaybackProof() (PlaybackProof, error) {
 +	pb, _ := p.device()
 +	if pb == nil || !p.playing.Load() || p.sink.Load() != nil {
 +		return PlaybackProof{}, fmt.Errorf("local output unavailable")
 +	}
-+	return PlaybackProof{p.outputEpoch.Load(), p.deaf.Load(), p.underruns.Load(), p.written.Load()}, nil
++	return PlaybackProof{
++		Epoch: p.outputEpoch.Load(), Dropped: p.deaf.Load(), Underruns: p.underruns.Load(), Written: p.written.Load(),
++		ForegroundQueued: p.foregroundQueued.Load(), ForegroundWritten: p.foregroundWritten.Load(),
++	}, nil
 +}
++
++// WaitForeground keeps a guarded duck active until every submitted foreground
++// frame has reached the local device. Background music never satisfies this wait.
++func (p *Player) WaitForeground(ctx context.Context, before PlaybackProof) error {
++	t := time.NewTicker(10 * time.Millisecond)
++	defer t.Stop()
++	for {
++		after, err := p.PlaybackProof()
++		if err != nil {
++			return err
++		}
++		if after.Epoch != before.Epoch || after.Dropped != before.Dropped || after.Underruns != before.Underruns {
++			return fmt.Errorf("output changed during announcement")
++		}
++		queued := after.ForegroundQueued - before.ForegroundQueued
++		if queued > 0 && after.ForegroundWritten-before.ForegroundWritten == queued && p.Queued() == 0 {
++			return nil
++		}
++		select {
++		case <-ctx.Done():
++			return ctx.Err()
++		case <-t.C:
++		}
++	}
++}
++
 +func (p *Player) VerifyPlayback(before PlaybackProof) error {
 +	after, err := p.PlaybackProof()
 +	if err != nil {
 +		return err
 +	}
-+	if after.Epoch != before.Epoch || after.Dropped != before.Dropped || after.Underruns != before.Underruns || after.Written <= before.Written || p.Queued() != 0 {
++	return verifyPlayback(before, after, p.Queued())
++}
++
++// Only foreground samples count as announcement progress. Music and silence can
++// keep the card writing forever; neither proves that the announcement was played.
++func verifyPlayback(before, after PlaybackProof, pending int) error {
++	queued := after.ForegroundQueued - before.ForegroundQueued
++	written := after.ForegroundWritten - before.ForegroundWritten
++	if queued == 0 || written != queued || after.Epoch != before.Epoch || after.Dropped != before.Dropped || after.Underruns != before.Underruns || after.Written <= before.Written || pending != 0 {
 +		return fmt.Errorf("output did not drain uninterrupted")
 +	}
 +	return nil
@@ -906,6 +1620,34 @@ index 8120478..db4b5b2 100644
 +	p.srcMu.Unlock()
 +	return !busy && !recent && !hasSource
 +}
++
++// ForegroundIdleForAnnouncement allows music to continue but excludes call,
++// alarm and previous speech lanes, including the tail already sent to hardware.
++func (p *Player) ForegroundIdleForAnnouncement() bool {
++	p.mu.Lock()
++	defer p.mu.Unlock()
++	return len(p.pending)+len(p.under)+len(p.bell) == 0 &&
++		time.Since(time.Unix(0, p.lastForegroundNano.Load())) >= HardwareTail
++}
++
++// MusicSourceIs verifies the currently attached renderer. A bed producer must
++// have no Source; a Source producer must not have unrelated queued bed audio.
++func (p *Player) MusicSourceIs(want Source) bool {
++	p.srcMu.Lock()
++	match := p.src == want
++	p.srcMu.Unlock()
++	if !match {
++		return false
++	}
++	if want != nil {
++		p.mu.Lock()
++		empty := len(p.bed) == 0
++		p.mu.Unlock()
++		return empty
++	}
++	return true
++}
++func (b *Bed) BelongsTo(p *Player) bool { return b != nil && b.p == p }
 diff --git a/echod/internal/lib/activitygate/gate.go b/echod/internal/lib/activitygate/gate.go
 new file mode 100644
 index 0000000..6239409
@@ -1094,10 +1836,10 @@ index 0000000..0578bc8
 +}
 diff --git a/echod/internal/lib/guardedannounce/manager.go b/echod/internal/lib/guardedannounce/manager.go
 new file mode 100644
-index 0000000..f62f35b
+index 0000000..8215aea
 --- /dev/null
 +++ b/echod/internal/lib/guardedannounce/manager.go
-@@ -0,0 +1,345 @@
+@@ -0,0 +1,355 @@
 +// Package guardedannounce implements durable, bounded one-way announcement jobs.
 +package guardedannounce
 +
@@ -1204,12 +1946,22 @@ index 0000000..f62f35b
 +	return hex.EncodeToString(s[:])
 +}
 +func (m *Manager) Submit(id, media string, expires int64, play Playback) Receipt {
++	return m.submit(id, media, expires, fingerprint(media, expires), m.idle, play)
++}
++
++// SubmitDuck shares the durable ID namespace with Submit. Only its fingerprint
++// and admission policy differ; old skip fingerprints remain byte-for-byte valid.
++func (m *Manager) SubmitDuck(id, media string, expires int64, idle func() string, play Playback) Receipt {
++	sum := sha256.Sum256([]byte("duck_music\n" + fingerprint(media, expires)))
++	return m.submit(id, media, expires, hex.EncodeToString(sum[:]), idle, play)
++}
++
++func (m *Manager) submit(id, media string, expires int64, fp string, idle func() string, play Playback) Receipt {
 +	m.mu.Lock()
 +	if !requestPattern.MatchString(id) {
 +		m.mu.Unlock()
 +		return m.receipt(id, "failed", "invalid_request_id")
 +	}
-+	fp := fingerprint(media, expires)
 +	if r, ok := m.records[id]; ok {
 +		m.mu.Unlock()
 +		if r.Fingerprint != fp {
@@ -1266,7 +2018,7 @@ index 0000000..f62f35b
 +		m.mu.Unlock()
 +		return r.Receipt
 +	}
-+	lease, reason := m.gate.Reserve(deadline, m.idle)
++	lease, reason := m.gate.Reserve(deadline, idle)
 +	if lease == nil {
 +		r.Status = "skipped"
 +		r.Reason = reason
@@ -1445,10 +2197,10 @@ index 0000000..f62f35b
 +}
 diff --git a/echod/internal/lib/guardedannounce/manager_test.go b/echod/internal/lib/guardedannounce/manager_test.go
 new file mode 100644
-index 0000000..440044d
+index 0000000..df7dfd7
 --- /dev/null
 +++ b/echod/internal/lib/guardedannounce/manager_test.go
-@@ -0,0 +1,269 @@
+@@ -0,0 +1,360 @@
 +package guardedannounce
 +
 +import (
@@ -1716,5 +2468,96 @@ index 0000000..440044d
 +	m.broken.Store(true)
 +	if m.Healthy() {
 +		t.Fatal("broken health not visible")
++	}
++}
++
++func TestDuckPolicySharesDurableNamespaceAndAdmission(t *testing.T) {
++	m := manager(t, func() string { return "audio_busy" })
++	expires := time.Now().Add(time.Minute).Unix()
++	var count atomic.Int32
++	started, finish := make(chan struct{}), make(chan struct{})
++	play := func(l *activitygate.Lease, mark func() error) error {
++		count.Add(1)
++		if err := mark(); err != nil {
++			return err
++		}
++		close(started)
++		<-finish
++		return nil
++	}
++	idle := func() string { return "" }
++	if r := m.SubmitDuck(id, media, expires, idle, play); r.Status != "accepted" {
++		t.Fatal(r)
++	}
++	<-started
++	var wg sync.WaitGroup
++	for range 12 {
++		wg.Add(1)
++		go func() {
++			defer wg.Done()
++			if r := m.SubmitDuck(id, media, expires, idle, play); r.Status != "playing" {
++				t.Error(r)
++			}
++		}()
++	}
++	wg.Wait()
++	if m.Submit(id, media, expires, play).Reason != "request_conflict" {
++		t.Fatal("duck ID accepted as skip")
++	}
++	close(finish)
++	wait(t, m, "completed")
++	if count.Load() != 1 {
++		t.Fatal("duplicate duck playback", count.Load())
++	}
++	reopened, err := Open(m.path, new(activitygate.Gate), idle)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if reopened.SubmitDuck(id, media, expires, idle, play).Status != "completed" {
++		t.Fatal("duck receipt not durable")
++	}
++	if reopened.Submit(id, media, expires, play).Reason != "request_conflict" {
++		t.Fatal("policy conflict lost after restart")
++	}
++	if m.Submit(other, media, expires, play).Status != "skipped" {
++		t.Fatal("legacy skip no longer skips")
++	}
++	if m.SubmitDuck(other, media, expires, idle, play).Reason != "request_conflict" {
++		t.Fatal("skip ID accepted as duck")
++	}
++}
++func TestDuckPolicyRetainsBusyGuardsAndOwnedCancellation(t *testing.T) {
++	for _, reason := range []string{"phone_busy", "assist_busy", "ring_busy", "audio_busy", "unsupported_music_output", "do_not_disturb", "quiet_hours"} {
++		t.Run(reason, func(t *testing.T) {
++			m := manager(t, func() string { return "" })
++			r := m.SubmitDuck(id, media, time.Now().Add(time.Minute).Unix(), func() string { return reason }, func(*activitygate.Lease, func() error) error { t.Error("played while busy"); return nil })
++			if r.Status != "skipped" || r.Reason != reason {
++				t.Fatal(r)
++			}
++		})
++	}
++	m := manager(t, func() string { return "audio_busy" })
++	started := make(chan struct{})
++	m.SubmitDuck(id, media, time.Now().Add(time.Minute).Unix(), func() string { return "" }, func(l *activitygate.Lease, mark func() error) error {
++		if err := mark(); err != nil {
++			return err
++		}
++		close(started)
++		<-l.Context().Done()
++		return l.Context().Err()
++	})
++	<-started
++	m.Stop(other)
++	if m.Status(id).Status != "playing" {
++		t.Fatal("stopped wrong owner")
++	}
++	leave, ok := m.gate.Enter()
++	if !ok {
++		t.Fatal("ordinary activity blocked")
++	}
++	leave()
++	wait(t, m, "stopped")
++	if m.Status(id).Reason != "preempted" {
++		t.Fatal(m.Status(id))
 +	}
 +}

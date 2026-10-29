@@ -14,13 +14,13 @@ keeps one existing SIP extension for ordinary telephone calls.
 
 ## Public HA contract
 
-The optional `echomuse_home` update, version `0.4.0b1`, provides response-only
+The optional `echomuse_home` update, version `0.4.0b2`, provides response-only
 services. Its [source and review](https://github.com/ha-homelab/ha-echomuse/pull/24)
 are maintained separately from this daemon overlay:
 
 - `announcement_capabilities`: `entity_id`.
 - `announcement_submit`: `entity_id`, `request_id`, `media_id`, `expires_at`
-  (Unix UTC seconds), `preannounce: false`, `busy_policy: skip`.
+  (Unix UTC seconds), `preannounce: false`, `busy_policy: skip` (default) or `duck_music`.
 - `announcement_status`: `entity_id`, `request_id`.
 - `announcement_stop`: `entity_id`, `request_id`.
 
@@ -39,8 +39,19 @@ This overlay also removes that implicit SIP injection from ordinary Assist
 announcements. Ordinary Assist announcements still lack the guarded request
 contract and must not be used as a fallback.
 
-The first mode skips busy devices; it does not pause music or promise to resume
-it. The guard belongs on the device, where calls, voice turns and audio playback
+The default `skip` mode preserves the first release's behavior: any music makes
+it skip the announcement. The optional `duck_music` mode speaks over supported
+local background music and temporarily reduces that music by the device's
+configured `Media.DuckDB`. It requires both `duck_music: true` in the native
+capabilities and the new native submit action. An older device is refused; the
+adapter never silently converts a duck request into skip or an unguarded call.
+
+Duck mode still refuses calls, active Assist turns, alarms, timers and another
+foreground announcement, and respects Do Not Disturb and quiet hours. It owns
+a temporary mixer claim rather than overwriting the user's master volume.
+Finishing, cancellation, expiry or failure releases only that claim. This
+allows volume changes made by the listener during speech to remain effective.
+The guard belongs on the device, where calls, voice turns and audio playback
 compete, not only in HA's potentially delayed state cache. A cancellation must
 target the same request and must never issue a generic media stop or hang-up.
 New ordinary activity preempts the exact announcement and waits at most two
@@ -52,7 +63,8 @@ playback drain; it does not prove that a person heard the audio.
 
 Native actions use the existing encrypted ESPHome connection and direct JSON
 responses: `guarded_announcement_submit`, `guarded_announcement_status`,
-`guarded_announcement_stop`, and `guarded_announcement_capabilities`. Every action
+`guarded_announcement_stop`, and `guarded_announcement_capabilities`. Duck mode
+uses the separate `guarded_announcement_submit_duck` action. Every action
 takes a `request_id`; submit additionally takes `media_id` and `expires_at` as
 strings. Request IDs have the form `announce-<32 lowercase hex digits>-<3 digits>`.
 There is no dependency on event-bus acknowledgements. Receipts include the
@@ -61,7 +73,8 @@ protocol and current process `boot_id`.
 The device records a request before allowing sound. Its bounded private journal
 retains up to 512 receipts for at least 24 hours after expiry. A restarted process
 returns `unknown` for an interrupted job and never automatically replays it.
-Conflicting reuse of an ID is refused. The deadline is at most 180 seconds ahead,
+Conflicting reuse of an ID, including a changed busy policy, is refused. Legacy
+`skip` fingerprints remain compatible across the update. The deadline is at most 180 seconds ahead,
 and decoded audio must be nonempty, at most 120 seconds, and fit the remaining
 deadline. Missing/corrupt storage disables guarded dispatch.
 
@@ -94,7 +107,7 @@ checks and rollback. It does not flash a boot image or replace OTA signing keys.
 ## Acceptance and release boundary
 
 The [dated validation record](../../docs/guarded-announcement-validation.md)
-lists the published alpha artifact hashes, software checks and acceptance limits.
+lists the published artifact hashes, software checks and acceptance limits.
 
 Offline concurrency, deadline, deduplication and ownership tests must pass before
 enabling the capability flags. Firmware compilation does not prove audio quality

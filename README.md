@@ -2,8 +2,8 @@
 
 Experimental development: [guarded one-way announcements](integrations/guarded-announcement/README.md)
 defines request-owned audio delivery with busy refusal, expiry and deduplication.
-The [alpha build and validation record](docs/guarded-announcement-validation.md)
-separates software checks from the still-pending acoustic acceptance.
+The [music-ducking beta](docs/guarded-announcement-ducking.md) adds explicit
+announcements over supported music; the original skip policy stays the default.
 
 **Both Echo Dot 2 units now run TECHO5 and connect directly to Home Assistant. Administrative checks pass; voice and music listening tests remain separate.**
 

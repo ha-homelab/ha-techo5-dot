@@ -121,6 +121,8 @@ jobs:
         run: |
           go test -race ./internal/lib/activitygate ./internal/lib/guardedannounce
           go test -race -tags dot ./internal/hardware/speaker -run '^(TestGuarded|TestPlaybackProof|TestAnnouncementIdle)'
+          go test -race -tags dot ./internal/feature/media -run '^TestGuardedDuckBypassesTurnPauseWithoutChangingPreference$'
+          go test -race -tags dot ./internal/feature/sendspin -run '^TestGuardedMusicRequiresOwnReadyLocalSource$'
           go test -race -tags dot ./internal/feature/voice -run '^TestGuardedManagerRemainsReachableAfterJournalFailure$'
 
   gate:

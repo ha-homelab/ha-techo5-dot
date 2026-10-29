@@ -12,7 +12,7 @@ import subprocess
 HERE = Path(__file__).resolve().parent
 BASE = "892cdef6663acbb6ee963ed5862e363d61aff253"
 UPSTREAM = "https://github.com/HuskerMinion/techo5.git"
-VERSION = "v1.0.40-myshka.1.alpha.1"
+VERSION = "v1.0.40-myshka.1.beta.1"
 
 
 def run(args, cwd=None, env=None):
