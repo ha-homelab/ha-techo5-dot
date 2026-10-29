@@ -2,7 +2,7 @@
 
 ## Current connection
 
-Both physical Dots now connect directly through encrypted ESPHome: **Audiocenter / Dot 001 runs TECHO5 v1.0.38**, and **Dot 002 remains on v1.0.36**. Neither Dot depends on its former EchoMuse Controller record. Dashboard and voice/music routes were reconciled, and both scanners forwarded fresh Bluetooth observations after the October 28 migration. See [deployment status](status.md) for the exact checks and remaining acoustic acceptance.
+Both physical Dots now connect directly through encrypted ESPHome and run **TECHO5 v1.0.39** after the October 28 signed OTA updates. Neither Dot depends on its former EchoMuse Controller record. Dashboard and voice/music routes were reconciled during migration, and both scanners forwarded fresh Bluetooth observations after the updates. See the [update record](updates.md) and [deployment status](status.md) for the exact checks and remaining acoustic acceptance.
 
 Before migration, this Dot used emOS/EchoMuse through EchoMuse Controller. The installer preserved its older EchoLocal name and pairing material and now advertises the physical device's factory network identity. That identity is different from the former controller's virtual identity. Reconcile existing HA entries before treating a discovery as a new physical speaker; do not publish either the identifiers or the encryption key.
 
