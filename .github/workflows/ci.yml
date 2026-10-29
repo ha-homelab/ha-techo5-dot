@@ -55,10 +55,11 @@ jobs:
           python-version: '3.11'
       - name: Check source and private-data boundaries
         run: |
-          python -m compileall -q scripts tests training
+          python -m compileall -q scripts tests training integrations
           python -m json.tool upstream-lock.json > /dev/null
           python scripts/check_public.py
           python scripts/check_docs.py
+          python -m unittest discover -s integrations/guarded-announcement -p 'test_*.py'
 
   training:
     name: Wake classifier parity
@@ -95,9 +96,36 @@ jobs:
           TECHO5_PARITY_RUNTIME: ${{ runner.temp }}/techo5-parity/wakeparity
         run: python -m unittest discover -s training/tests -v
 
+  guarded-announcement:
+    name: Guarded announcement source and ARM build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version: '1.27.1'
+          cache: false
+      - name: Apply the exact upstream patch and cross-compile
+        run: python integrations/guarded-announcement/build.py --work-dir "$RUNNER_TEMP/guarded-announcement"
+      - name: Test request ownership and concurrent admission without devices
+        working-directory: ${{ runner.temp }}/guarded-announcement/source/echod
+        run: |
+          go test -race ./internal/lib/activitygate ./internal/lib/guardedannounce
+          go test -race -tags dot ./internal/hardware/speaker -run '^(TestGuarded|TestPlaybackProof|TestAnnouncementIdle)'
+          go test -race -tags dot ./internal/feature/voice -run '^TestGuardedManagerRemainsReachableAfterJournalFailure$'
+
   gate:
     name: CI gate
-    needs: [python, security, source, training]
+    needs: [python, security, source, training, guarded-announcement]
     if: ${{ always() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -112,7 +140,7 @@ jobs:
         run: |
           import json, os
           results = json.loads(os.environ['RESULTS'])
-          expected = {'python', 'security', 'source', 'training'}
+          expected = {'python', 'security', 'source', 'training', 'guarded-announcement'}
           if set(results) != expected:
               raise SystemExit('Validation job inventory differs')
           failed = {name: value['result'] for name, value in results.items()

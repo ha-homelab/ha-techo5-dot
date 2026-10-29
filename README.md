@@ -1,5 +1,9 @@
 # HA · TECHO5 Dot
 
+Experimental development: [guarded one-way announcements](integrations/guarded-announcement/README.md)
+defines request-owned audio delivery with busy refusal, expiry and deduplication.
+It is separate from the installed stock firmware; acoustic acceptance is pending.
+
 **Both Echo Dot 2 units now run TECHO5 and connect directly to Home Assistant. Administrative checks pass; voice and music listening tests remain separate.**
 
 [English](README.md) · [Русский](README.ru.md) · [Deutsch](README.de.md) · [Español](README.es.md) · [Français](README.fr.md)

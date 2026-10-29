@@ -1,0 +1,1720 @@
+diff --git a/echod/internal/config/store.go b/echod/internal/config/store.go
+index 3856183..379ad54 100644
+--- a/echod/internal/config/store.go
++++ b/echod/internal/config/store.go
+@@ -4,6 +4,7 @@ import (
+ 	"encoding/json"
+ 	"errors"
+ 	"fmt"
++	"github.com/HuskerMinion/techo5/echod/internal/lib/activitygate"
+ 	"log/slog"
+ 	"os"
+ 	"path/filepath"
+@@ -151,7 +152,11 @@ func (st *Store) Update(f func(*Config)) error {
+ 	st.mu.Lock()
+ 	defer st.mu.Unlock()
+ 
++	beforeHome, beforeQuiet := st.c.Home.DoNotDisturb, st.c.Speaker.QuietHours
+ 	f(&st.c)
++	if st.c.Home.DoNotDisturb != beforeHome || st.c.Speaker.QuietHours != beforeQuiet {
++		activitygate.Device.Interrupt("silence_policy_changed")
++	}
+ 	return st.write()
+ }
+ 
+@@ -166,6 +171,9 @@ func (st *Store) UpdateOrUndo(f func(*Config)) error {
+ 
+ 	before := deepCopy(st.c)
+ 	f(&st.c)
++	if st.c.Home.DoNotDisturb != before.Home.DoNotDisturb || st.c.Speaker.QuietHours != before.Speaker.QuietHours {
++		activitygate.Device.Interrupt("silence_policy_changed")
++	}
+ 	err := st.write()
+ 	var renamed afterRename
+ 	switch {
+diff --git a/echod/internal/feature/media/stream.go b/echod/internal/feature/media/stream.go
+index f311bd4..b722be3 100644
+--- a/echod/internal/feature/media/stream.go
++++ b/echod/internal/feature/media/stream.go
+@@ -6,6 +6,7 @@ import (
+ 	"encoding/binary"
+ 	"errors"
+ 	"fmt"
++	"github.com/HuskerMinion/techo5/echod/internal/lib/activitygate"
+ 	"io"
+ 	"log/slog"
+ 	"math"
+@@ -379,6 +380,12 @@ func (m *Stream) markLive(url string) bool {
+ func (m *Stream) start(t *track) (*track, context.Context) {
+ 	ctx, cancel := context.WithCancel(context.Background())
+ 	t.cancel = cancel
++	leave, admitted := activitygate.Device.Enter()
++	if !admitted {
++		cancel()
++		return t, ctx
++	}
++	defer leave()
+ 
+ 	m.mu.Lock()
+ 	m.asks++
+diff --git a/echod/internal/feature/phone/intercom.go b/echod/internal/feature/phone/intercom.go
+index 21efb0a..8e97055 100644
+--- a/echod/internal/feature/phone/intercom.go
++++ b/echod/internal/feature/phone/intercom.go
+@@ -6,6 +6,7 @@ import (
+ 	"encoding/binary"
+ 	"errors"
+ 	"fmt"
++	"github.com/HuskerMinion/techo5/echod/internal/lib/activitygate"
+ 	"io"
+ 	"log/slog"
+ 	"net"
+@@ -342,6 +343,12 @@ func (p *Phone) intercomIn(w http.ResponseWriter, r *http.Request) {
+ 		slog.Info("intercom: not dropping in for a caller this device does not know there; ringing", "from", caller, "address", from)
+ 	}
+ 
++	leave, admitted := activitygate.Device.Enter()
++	if !admitted {
++		_ = writeMsg(c, msgBusy, nil)
++		return
++	}
++	defer leave()
+ 	answered := make(chan struct{})
+ 	ctx, cancel := context.WithCancel(context.Background())
+ 	defer cancel()
+@@ -433,6 +440,12 @@ func (p *Phone) intercomIn(w http.ResponseWriter, r *http.Request) {
+ // CallDevice calls another device in the house by its name. It returns once the call is under way;
+ // what happens to it is reported through State and the Home Assistant event, as a phone call's is.
+ func (p *Phone) CallDevice(name string) error {
++	leave, admitted := activitygate.Device.Enter()
++	if !admitted {
++		return errors.New("intercom: announcement is stopping")
++	}
++	defer leave()
++
+ 	name = strings.TrimSpace(name)
+ 	if !hasMicrophone() {
+ 		return errors.New("intercom: this device has no microphone and cannot place calls")
+diff --git a/echod/internal/feature/phone/phone.go b/echod/internal/feature/phone/phone.go
+index e716671..333a2af 100644
+--- a/echod/internal/feature/phone/phone.go
++++ b/echod/internal/feature/phone/phone.go
+@@ -15,6 +15,7 @@ import (
+ 	"context"
+ 	"errors"
+ 	"fmt"
++	"github.com/HuskerMinion/techo5/echod/internal/lib/activitygate"
+ 	"log/slog"
+ 	"os"
+ 	"slices"
+@@ -590,6 +591,12 @@ func (p *Phone) CallNamed(number, name string) error { return p.CallAfter(number
+ // voice waits so that it can be called off after the device has said whom it is calling. A nil wait
+ // dials straight away. Home Assistant hears of the call (the dialing event) only once it is dialed.
+ func (p *Phone) CallAfter(number, name string, wait func(ctx context.Context) bool) error {
++	leave, admitted := activitygate.Device.Enter()
++	if !admitted {
++		return errors.New("phone: announcement is stopping")
++	}
++	defer leave()
++
+ 	number = dialable(number)
+ 	if number == "" {
+ 		return errors.New("phone: no number to call")
+@@ -663,6 +670,13 @@ func (p *Phone) CallAfter(number, name string, wait func(ctx context.Context) bo
+ 
+ // incoming is a call offered to the device.
+ func (p *Phone) incoming(d *diago.DialogServerSession) {
++	leave, admitted := activitygate.Device.Enter()
++	if !admitted {
++		_ = d.Respond(sip.StatusBusyHere, "Busy Here", nil)
++		return
++	}
++	defer leave()
++
+ 	caller := callerOf(d.InviteRequest)
+ 	p.mu.Lock()
+ 	busy := p.state.Phase != Idle
+diff --git a/echod/internal/feature/ring/ring.go b/echod/internal/feature/ring/ring.go
+index 8013ca6..37b2250 100644
+--- a/echod/internal/feature/ring/ring.go
++++ b/echod/internal/feature/ring/ring.go
+@@ -8,6 +8,7 @@
+ package ring
+ 
+ import (
++	"github.com/HuskerMinion/techo5/echod/internal/lib/activitygate"
+ 	"sync"
+ 	"time"
+ )
+@@ -64,6 +65,11 @@ func init() { state.now = time.Now }
+ // Sounding marks a ring as sounding until the returned function is called. Call it from the ring
+ // loop with defer.
+ func Sounding() (done func()) {
++	leave, ok := activitygate.Device.Enter()
++	if !ok {
++		return func() {}
++	}
++	defer leave()
+ 	state.mu.Lock()
+ 	state.sounding++
+ 	state.mu.Unlock()
+diff --git a/echod/internal/feature/sendspin/session.go b/echod/internal/feature/sendspin/session.go
+index 39254f9..37d1dac 100644
+--- a/echod/internal/feature/sendspin/session.go
++++ b/echod/internal/feature/sendspin/session.go
+@@ -4,6 +4,7 @@ import (
+ 	"context"
+ 	"encoding/base64"
+ 	"errors"
++	"github.com/HuskerMinion/techo5/echod/internal/lib/activitygate"
+ 	"log/slog"
+ 	"math"
+ 	"sync/atomic"
+@@ -265,6 +266,12 @@ func (s *session) run(ctx context.Context) error {
+ 
+ // began builds the decoder for the negotiated format and takes the speaker.
+ func (s *session) began(start protocol.StreamStart) {
++	leave, admitted := activitygate.Device.Enter()
++	if !admitted {
++		return
++	}
++	defer leave()
++
+ 	if start.Player == nil {
+ 		return
+ 	}
+diff --git a/echod/internal/feature/voice/announce.go b/echod/internal/feature/voice/announce.go
+index 58268e4..ba62fb2 100644
+--- a/echod/internal/feature/voice/announce.go
++++ b/echod/internal/feature/voice/announce.go
+@@ -2,6 +2,7 @@ package voice
+ 
+ import (
+ 	"context"
++	"github.com/HuskerMinion/techo5/echod/internal/lib/activitygate"
+ 	"log/slog"
+ 	"time"
+ 
+@@ -16,6 +17,13 @@ import (
+ // announce plays what Home Assistant asks for, then reports back. It runs off the connection's
+ // read loop: fetching and playing must not block it.
+ func (t *conversation) announce(a esphome.Announce) {
++	leave, admitted := activitygate.Device.Enter()
++	if !admitted {
++		_ = t.vs.AnnounceFinished(false)
++		return
++	}
++	defer leave()
++
+ 	slog.Info("announce", "text", a.Text, "start_conversation", a.StartConversation)
+ 	// One that asks for an answer is a question to whoever is here: its words go on the screen.
+ 	asks := a.StartConversation && a.Text != ""
+@@ -31,7 +39,7 @@ func (t *conversation) announce(a esphome.Announce) {
+ 			if url == "" {
+ 				continue
+ 			}
+-			if err := t.play(ctx, url, nil, true); err != nil {
++			if err := t.play(ctx, url, nil, false); err != nil {
+ 				return err
+ 			}
+ 		}
+@@ -63,15 +71,15 @@ func (t *conversation) announce(a esphome.Announce) {
+ // for it to be heard is the driver's, not ours: this returns as soon as it has been handed over.
+ // playing is told just before the audio is queued, which is a reply's evPlaying; an announcement has
+ // none, since it is not what the turn's deadline is waiting for. intoCall sends it into a call that is
+-// up as well: always for an announcement, and for a reply when Assistant replies go into calls is on.
++// up as well only when the caller explicitly requests it. One-way announcements never do.
+ func (t *conversation) play(ctx context.Context, url string, playing func(), intoCall bool) error {
+ 	samples, err := media.Fetch(ctx, url)
+ 	if err != nil {
+ 		return err
+ 	}
+ 	samples = media.Normalize(samples)
+-	// An announcement made while a call is up is for the call as well, which is how an automation
+-	// tells whoever answered a call it placed what the call is about.
++	// Call injection is opt-in for conversational replies. Ordinary and guarded
++	// announcements pass false and never send their samples into a SIP call.
+ 	if intoCall && phone.Get().Say(samples) {
+ 		slog.Info("sent into the call", "samples", len(samples), "reply", playing != nil)
+ 	}
+diff --git a/echod/internal/feature/voice/conversation.go b/echod/internal/feature/voice/conversation.go
+index 5fb03fb..118c122 100644
+--- a/echod/internal/feature/voice/conversation.go
++++ b/echod/internal/feature/voice/conversation.go
+@@ -2,6 +2,7 @@ package voice
+ 
+ import (
+ 	"context"
++	"github.com/HuskerMinion/techo5/echod/internal/lib/activitygate"
+ 	"log/slog"
+ 	"math"
+ 	"sync"
+@@ -189,7 +190,8 @@ type conversation struct {
+ 	// visible is the phase, published for anything outside the loop that needs to ask. Only the loop
+ 	// writes it, and a reader tolerates being a moment out of date: the button uses it to choose
+ 	// between starting and canceling, and posting either is safe whichever it picks.
+-	visible atomic.Int32
++	visible    atomic.Int32
++	guardWatch atomic.Bool
+ 
+ 	// Below here belongs to the run goroutine alone.
+ 	phase phase
+@@ -803,6 +805,12 @@ func (c *conversation) muted() (bool, error) { return mute.Get().Muted() }
+ 
+ // start opens a turn on the pipeline paired with a slot, and reports whether it did.
+ func (c *conversation) start(n nextTurn) bool {
++	leave, admitted := activitygate.Device.Enter()
++	if !admitted {
++		return false
++	}
++	defer leave()
++
+ 	slot := n.slot
+ 
+ 	// A wake the device's own engine was sure of: the word is being said the way it hears it, so what
+diff --git a/echod/internal/feature/voice/guarded_announce.go b/echod/internal/feature/voice/guarded_announce.go
+new file mode 100644
+index 0000000..ab01f06
+--- /dev/null
++++ b/echod/internal/feature/voice/guarded_announce.go
+@@ -0,0 +1,184 @@
++package voice
++
++import (
++	"context"
++	"errors"
++	"fmt"
++	"os"
++	"path/filepath"
++	"strconv"
++	"strings"
++	"time"
++
++	"github.com/HuskerMinion/techo5/echod/internal/config"
++	"github.com/HuskerMinion/techo5/echod/internal/feature/media"
++	"github.com/HuskerMinion/techo5/echod/internal/feature/phone"
++	"github.com/HuskerMinion/techo5/echod/internal/feature/ring"
++	"github.com/HuskerMinion/techo5/echod/internal/hardware/speaker"
++	"github.com/HuskerMinion/techo5/echod/internal/layout"
++	"github.com/HuskerMinion/techo5/echod/internal/lib/activitygate"
++	"github.com/HuskerMinion/techo5/echod/internal/lib/guardedannounce"
++	esphome "github.com/ygelfand/go-esphome-device"
++)
++
++// Once an owner exists, obtaining it never takes a journal lock or rereads disk.
++// A damaged journal blocks new work, but must not block stopping existing work.
++func (v *Voice) guardedManager() (*guardedannounce.Manager, error) {
++	v.guardedOnce.Do(func() {
++		if !encryptedAnnouncements() {
++			v.guardedErr = errors.New("guarded announcements require encrypted ESPHome")
++			return
++		}
++		v.guarded, v.guardedErr = guardedannounce.Open(filepath.Join(layout.StateDir, "guarded-announcements.json"), &activitygate.Device, v.guardedIdle)
++	})
++	return v.guarded, v.guardedErr
++}
++
++// guardedIdle is called under the exclusive admission barrier. Every competing
++// activity publishes its non-idle state while holding the shared barrier.
++func (v *Voice) guardedIdle() string {
++	if ring.IsSounding() {
++		return "ring_busy"
++	}
++	if phone.Get().Busy() {
++		return "phone_busy"
++	}
++	if v.turn.Busy() || v.turn.guardWatch.Load() {
++		return "assist_busy"
++	}
++	if v.turn.sound.Busy() || !v.turn.speaker.IdleForAnnouncement() || v.turn.sound.Backgrounds().Playing() != nil {
++		return "audio_busy"
++	}
++	if v.turn.player.ExternalPlaying() {
++		return "media_busy"
++	}
++	if config.Get().Home.DoNotDisturb {
++		return "do_not_disturb"
++	}
++	if config.Quiet() {
++		return "quiet_hours"
++	}
++	if _, err := v.turn.speaker.PlaybackProof(); err != nil {
++		return "output_unavailable"
++	}
++	return ""
++}
++func encryptedAnnouncements() bool {
++	b, err := os.ReadFile(layout.KeyPath)
++	if err != nil {
++		return false
++	}
++	key, err := esphome.ParsePSK(strings.TrimSpace(string(b)))
++	return err == nil && !key.IsZero()
++}
++func (v *Voice) guardedActions() []*esphome.Action {
++	id := []esphome.Arg{{Name: "request_id", Type: esphome.ArgString}}
++	obtain := func() (*guardedannounce.Manager, error) {
++		return v.guardedManager()
++	}
++	return []*esphome.Action{
++		{Name: "guarded_announcement_submit", Answers: true, Args: []esphome.Arg{{Name: "request_id", Type: esphome.ArgString}, {Name: "media_id", Type: esphome.ArgString}, {Name: "expires_at", Type: esphome.ArgString}}, Run: func(c esphome.Call) (any, error) {
++			m, err := obtain()
++			if err != nil {
++				return nil, err
++			}
++			if !m.Healthy() {
++				return nil, errors.New("announcement journal unavailable")
++			}
++			expires, err := strconv.ParseInt(c.String("expires_at"), 10, 64)
++			if err != nil {
++				return nil, errors.New("invalid expires_at")
++			}
++			url := c.String("media_id")
++			return m.Submit(c.String("request_id"), url, expires, func(l *activitygate.Lease, mark func() error) error { return v.playGuarded(l, url, mark) }), nil
++		}},
++		{Name: "guarded_announcement_status", Answers: true, Args: id, Run: func(c esphome.Call) (any, error) {
++			m, e := obtain()
++			if e != nil {
++				return nil, e
++			}
++			return m.Status(c.String("request_id")), nil
++		}},
++		{Name: "guarded_announcement_stop", Answers: true, Args: id, Run: func(c esphome.Call) (any, error) {
++			m, e := obtain()
++			if e != nil {
++				return nil, e
++			}
++			return m.Stop(c.String("request_id")), nil
++		}},
++		{Name: "guarded_announcement_capabilities", Answers: true, Args: id, Run: func(c esphome.Call) (any, error) {
++			m, e := obtain()
++			if e != nil {
++				return nil, e
++			}
++			if !m.Healthy() {
++				return nil, errors.New("announcement journal unavailable")
++			}
++			return map[string]any{"request_id": c.String("request_id"), "protocol": guardedannounce.Protocol, "boot_id": m.BootID(), "atomic_idle_guard": true, "dedup": true, "owned_cancel": true, "honest_completion": true, "deadline_enforced": true, "preannounce": false, "start_conversation": false, "busy_policy": "skip", "max_duration_seconds": 180}, nil
++		}},
++	}
++}
++
++// playGuarded owns the exclusive gate until it returns, including cancellation
++// drain. It never calls phone.Say, cancels an Assist pipeline, or opens a mic.
++func (v *Voice) playGuarded(l *activitygate.Lease, url string, mark func() error) error {
++	monitorDone := make(chan struct{})
++	defer close(monitorDone)
++	go func() {
++		t := time.NewTicker(100 * time.Millisecond)
++		defer t.Stop()
++		for {
++			select {
++			case <-monitorDone:
++				return
++			case <-l.Context().Done():
++				return
++			case <-t.C:
++				if config.Get().Home.DoNotDisturb || config.Quiet() {
++					l.Cancel("silence_policy_changed")
++					return
++				}
++			}
++		}
++	}()
++	samples, err := media.Fetch(l.Context(), url)
++	if err != nil {
++		return err
++	}
++	if len(samples) == 0 || len(samples) > 120*speaker.VoiceRate {
++		return errors.New("announcement audio duration outside 0..120 seconds")
++	}
++	duration := time.Duration(len(samples))*time.Second/speaker.VoiceRate + time.Second
++	if until, ok := l.Context().Deadline(); !ok || time.Until(until) < duration {
++		return errors.New("announcement cannot finish before expiry")
++	}
++	if config.Get().Home.DoNotDisturb || config.Quiet() {
++		return errors.New("silence policy active")
++	}
++	proof, err := v.turn.speaker.PlaybackProof()
++	if err != nil {
++		return err
++	}
++	c := v.turn.sound.ClaimGuarded(l, func(ctx context.Context, p *speaker.Player) error {
++		if err := ctx.Err(); err != nil {
++			return err
++		}
++		if err := mark(); err != nil {
++			return err
++		}
++		if err := ctx.Err(); err != nil {
++			return err
++		}
++		p.PlayVoice(media.ForSpeaker(media.Normalize(samples), nil))
++		p.PlayVoice(make([]int16, speaker.VoiceRate*media.Tail/1000))
++		return nil
++	})
++	<-c.Done()
++	if c.Err() != nil {
++		return c.Err()
++	}
++	if c.Stopped() || l.Context().Err() != nil {
++		return fmt.Errorf("announcement stopped")
++	}
++	return v.turn.speaker.VerifyPlayback(proof)
++}
+diff --git a/echod/internal/feature/voice/guarded_announce_test.go b/echod/internal/feature/voice/guarded_announce_test.go
+new file mode 100644
+index 0000000..e199578
+--- /dev/null
++++ b/echod/internal/feature/voice/guarded_announce_test.go
+@@ -0,0 +1,37 @@
++package voice
++
++import (
++	"github.com/HuskerMinion/techo5/echod/internal/lib/activitygate"
++	"github.com/HuskerMinion/techo5/echod/internal/lib/guardedannounce"
++	"os"
++	"path/filepath"
++	"testing"
++	"time"
++)
++
++// A broken journal prevents a new submission, never access to the existing
++// manager's status/cancel path. No hardware, configuration or network is used.
++func TestGuardedManagerRemainsReachableAfterJournalFailure(t *testing.T) {
++	path := filepath.Join(t.TempDir(), "jobs.json")
++	m, err := guardedannounce.Open(path, new(activitygate.Gate), func() string { return "" })
++	if err != nil {
++		t.Fatal(err)
++	}
++	if err = os.Mkdir(path, 0700); err != nil {
++		t.Fatal(err)
++	}
++	id := "announce-0123456789abcdef0123456789abcdef-223"
++	m.Submit(id, "http://ha.invalid/file.wav", time.Now().Add(time.Minute).Unix(), func(*activitygate.Lease, func() error) error { t.Fatal("audio must not run"); return nil })
++	if m.Healthy() {
++		t.Fatal("failed persistence remained healthy")
++	}
++	v := &Voice{guarded: m}
++	v.guardedOnce.Do(func() {})
++	got, err := v.guardedManager()
++	if err != nil || got != m {
++		t.Fatal("cancel/status manager unavailable", err)
++	}
++	if got.Stop(id).Status != "unknown" {
++		t.Fatal("failed journal should report unknown")
++	}
++}
+diff --git a/echod/internal/feature/voice/hawake.go b/echod/internal/feature/voice/hawake.go
+index 99c43e5..9f0ceda 100644
+--- a/echod/internal/feature/voice/hawake.go
++++ b/echod/internal/feature/voice/hawake.go
+@@ -2,6 +2,7 @@ package voice
+ 
+ import (
+ 	"context"
++	"github.com/HuskerMinion/techo5/echod/internal/lib/activitygate"
+ 	"log/slog"
+ 	"time"
+ 
+@@ -463,6 +464,12 @@ func (c *conversation) micBusy() bool {
+ // notes the phrase its engine heard and, given the same one again in the run, refuses it as a second
+ // device hearing the word: no phrase means the first pipeline, and nothing to refuse.
+ func (c *conversation) openWatch(mode watchMode, slot int, peak float64) {
++	leave, admitted := activitygate.Device.Enter()
++	if !admitted {
++		return
++	}
++	defer leave()
++
+ 	watch := c.ha.watch
+ 	c.send("wake word run", func() error { return watch("") })
+ 	c.runOpen = true
+@@ -476,6 +483,7 @@ func (c *conversation) openWatch(mode watchMode, slot int, peak float64) {
+ 	ctx, cancel := context.WithCancel(context.Background())
+ 	w.stop = cancel
+ 	c.watch = w
++	c.guardWatch.Store(true)
+ 	frames, pre, unlisten := c.source.ListenHistory("wake word on home assistant", history)
+ 	safe.Go("wake word audio", func() {
+ 		defer unlisten()
+@@ -523,6 +531,7 @@ func (c *conversation) dropWatch() {
+ 		w.timeout.Stop()
+ 	}
+ 	c.watch = nil
++	c.guardWatch.Store(false)
+ }
+ 
+ // watchTimeout is the confirming run's deadline, nil when there is none to wait on.
+diff --git a/echod/internal/feature/voice/voice.go b/echod/internal/feature/voice/voice.go
+index 32636ef..28a4981 100644
+--- a/echod/internal/feature/voice/voice.go
++++ b/echod/internal/feature/voice/voice.go
+@@ -32,6 +32,7 @@ import (
+ 	"github.com/HuskerMinion/techo5/echod/internal/hardware/buttons"
+ 	"github.com/HuskerMinion/techo5/echod/internal/hardware/led"
+ 	"github.com/HuskerMinion/techo5/echod/internal/hardware/speaker"
++	"github.com/HuskerMinion/techo5/echod/internal/lib/guardedannounce"
+ 	"github.com/HuskerMinion/techo5/echod/internal/lib/wake"
+ )
+ 
+@@ -48,9 +49,12 @@ const Features = esphome.DefaultVoiceFeatures |
+ 	esphome.FeatureTimers
+ 
+ type Voice struct {
+-	vs     *esphome.VoiceSatellite
+-	turn   *conversation
+-	effect *esphome.Action
++	vs          *esphome.VoiceSatellite
++	turn        *conversation
++	effect      *esphome.Action
++	guardedOnce sync.Once
++	guarded     *guardedannounce.Manager
++	guardedErr  error
+ }
+ 
+ var (
+@@ -162,7 +166,7 @@ func (v *Voice) Actions() []*esphome.Action {
+ 			},
+ 		}
+ 	}
+-	return []*esphome.Action{v.effect}
++	return append([]*esphome.Action{v.effect}, v.guardedActions()...)
+ }
+ 
+ // ShowEffect puts the effect named name on the ring for the step the running request is in, for an
+diff --git a/echod/internal/hardware/speaker/arbiter.go b/echod/internal/hardware/speaker/arbiter.go
+index c2da187..ac31924 100644
+--- a/echod/internal/hardware/speaker/arbiter.go
++++ b/echod/internal/hardware/speaker/arbiter.go
+@@ -2,6 +2,7 @@ package speaker
+ 
+ import (
+ 	"fmt"
++	"github.com/HuskerMinion/techo5/echod/internal/lib/activitygate"
+ 	"log/slog"
+ 	"slices"
+ 	"sync"
+@@ -53,6 +54,12 @@ func (d *Driver) Backgrounds() *Arbiter {
+ 
+ // Took is a producer starting. Whatever was playing stands down but keeps its place.
+ func (a *Arbiter) Took(p Producer) {
++	leave, admitted := activitygate.Device.Enter()
++	if !admitted {
++		return
++	}
++	defer leave()
++
+ 	a.mu.Lock()
+ 	// A producer under the one being heard was stood down once, by whatever took the speaker over it
+ 	// or by the hold. Taking the speaker back is where that is undone: nothing else would undo it, and
+diff --git a/echod/internal/hardware/speaker/driver.go b/echod/internal/hardware/speaker/driver.go
+index 3097e36..af242b9 100644
+--- a/echod/internal/hardware/speaker/driver.go
++++ b/echod/internal/hardware/speaker/driver.go
+@@ -3,6 +3,7 @@ package speaker
+ import (
+ 	"context"
+ 	"fmt"
++	"github.com/HuskerMinion/techo5/echod/internal/lib/activitygate"
+ 	"log/slog"
+ 	"sync"
+ 	"time"
+@@ -131,6 +132,7 @@ func duckDB(deep bool) int {
+ // words ducks the background, and a sound over the music ducks it too, but it is not words — it never
+ // displaces what is being said, and it needs more room than words do.
+ type claimSpec struct {
++	guard *activitygate.Lease
+ 	over  bool // sounds over the background rather than standing it down
+ 	waits bool // waits for whatever holds the speaker rather than displacing it
+ 	deep  bool // ducks deeper than words: a sound whose own level is low, heard over the room's music
+@@ -142,7 +144,22 @@ type claimSpec struct {
+ }
+ 
+ func (d *Driver) claim(name string, spec claimSpec, play func(ctx context.Context, p *Player) error) *Claim {
+-	ctx, cancel := context.WithCancel(context.Background())
++	var leave func()
++	if spec.guard == nil {
++		var admitted bool
++		leave, admitted = activitygate.Device.Enter()
++		if !admitted {
++			return rejectedClaim(name)
++		}
++		defer leave()
++	} else if !spec.guard.Valid() {
++		return rejectedClaim(name)
++	}
++	parent := context.Background()
++	if spec.guard != nil {
++		parent = spec.guard.Context()
++	}
++	ctx, cancel := context.WithCancel(parent)
+ 	c := &Claim{name: name, over: spec.over, overlay: spec.overlay, cancel: cancel, done: make(chan struct{})}
+ 	if spec.over {
+ 		// Only a claim that sounds over the background ducks anything, and working out how far is the
+@@ -177,6 +194,15 @@ func (d *Driver) claim(name string, spec claimSpec, play func(ctx context.Contex
+ 
+ 	go func() {
+ 		defer close(c.done)
++		if spec.guard != nil {
++			// The exclusive owner clears its own queue before ordinary activity resumes.
++			defer func() {
++				if ctx.Err() != nil {
++					d.p.Drain()
++					time.Sleep(HardwareTail)
++				}
++			}()
++		}
+ 		if bg != nil {
+ 			defer c.endDuck()
+ 		}
+@@ -232,10 +258,15 @@ func (d *Driver) take(ctx context.Context, c *Claim, beside bool) (ok, alongside
+ 			return false, false
+ 		}
+ 
++		leave, admitted := activitygate.Device.Enter()
++		if !admitted {
++			return false, false
++		}
+ 		d.mu.Lock()
+ 		if d.now == nil || d.now == c {
+ 			d.now = c
+ 			d.mu.Unlock()
++			leave()
+ 			// The background's side of holding the speaker is this claim's now, which is what settle
+ 			// keeps equal to "something holds it" — an over claim holds it without standing the
+ 			// background down.
+@@ -244,6 +275,7 @@ func (d *Driver) take(ctx context.Context, c *Claim, beside bool) (ok, alongside
+ 		}
+ 		held := d.now
+ 		d.mu.Unlock()
++		leave()
+ 		if beside && held.overlay && !held.Finished() {
+ 			return true, true
+ 		}
+@@ -301,11 +333,19 @@ func (d *Driver) settle() {
+ // Interject makes a sound without taking the speaker from what has it. Short feedback — a volume
+ // beep, a mute tone — is worth hearing, and not worth losing a reply over: it goes into the queue
+ // behind whatever is already there rather than replacing it.
+-func (d *Driver) Interject(play func(p *Player)) { play(d.p) }
++func (d *Driver) Interject(play func(p *Player)) {
++	leave, ok := activitygate.Device.Enter()
++	if !ok {
++		return
++	}
++	defer leave()
++	play(d.p)
++}
+ 
+ // Silence stops whatever is playing and empties the queue whether anything claimed it or not. It is
+ // safe when nothing is playing.
+ func (d *Driver) Silence() {
++	activitygate.Device.Interrupt("local_stop")
+ 	d.mu.Lock()
+ 	c := d.now
+ 	d.now = nil
+@@ -577,3 +617,15 @@ func (c *Claim) fail(err error) {
+ 	defer c.mu.Unlock()
+ 	c.err = err
+ }
++
++// ClaimGuarded requires a current exclusive announcement lease. Ordinary claims
++// must make that owner stop first and never share the queue with it.
++func (d *Driver) ClaimGuarded(l *activitygate.Lease, play func(context.Context, *Player) error) *Claim {
++	return d.claim("guarded announcement", claimSpec{guard: l}, play)
++}
++func rejectedClaim(name string) *Claim {
++	c := &Claim{name: name, done: make(chan struct{}), stopped: true, err: fmt.Errorf("announcement admission busy")}
++	c.cancel = func() {}
++	close(c.done)
++	return c
++}
+diff --git a/echod/internal/hardware/speaker/guarded_test.go b/echod/internal/hardware/speaker/guarded_test.go
+new file mode 100644
+index 0000000..c55827a
+--- /dev/null
++++ b/echod/internal/hardware/speaker/guarded_test.go
+@@ -0,0 +1,63 @@
++package speaker
++
++import (
++	"context"
++	"github.com/HuskerMinion/techo5/echod/internal/lib/activitygate"
++	"sync/atomic"
++	"testing"
++	"time"
++)
++
++func TestGuardedClaimDoesNotPreemptItself(t *testing.T) {
++	l, reason := activitygate.Device.Reserve(time.Now().Add(5*time.Second), func() string { return "" })
++	if l == nil {
++		t.Fatal(reason)
++	}
++	defer l.Release()
++	d := driver()
++	var ran atomic.Bool
++	c := d.ClaimGuarded(l, func(ctx context.Context, _ *Player) error { ran.Store(true); return ctx.Err() })
++	waitFor(t, c)
++	if !ran.Load() || c.Err() != nil || c.Stopped() || l.Context().Err() != nil {
++		t.Fatal("guard preempted itself", c.Err(), l.Reason())
++	}
++}
++func TestGuardedClaimPreemptionWaitsForOwnedCleanup(t *testing.T) {
++	l, reason := activitygate.Device.Reserve(time.Now().Add(5*time.Second), func() string { return "" })
++	if l == nil {
++		t.Fatal(reason)
++	}
++	d := driver()
++	started := make(chan struct{})
++	c := d.ClaimGuarded(l, func(ctx context.Context, _ *Player) error { close(started); <-ctx.Done(); return ctx.Err() })
++	<-started
++	go func() { <-c.Done(); l.Release() }()
++	var ran atomic.Bool
++	next := d.Claim("ordinary", func(context.Context, *Player) error { ran.Store(true); return nil })
++	waitFor(t, next)
++	if !ran.Load() || l.Reason() != "preempted" || !c.Finished() {
++		t.Fatal("owned cleanup not complete")
++	}
++}
++func TestPlaybackProofRejectsMissingOutput(t *testing.T) {
++	if _, err := New().PlaybackProof(); err == nil {
++		t.Fatal("missing device reported healthy")
++	}
++}
++func TestAnnouncementIdleIncludesAllLanesAndTail(t *testing.T) {
++	p := New()
++	if !p.IdleForAnnouncement() {
++		t.Fatal("new player busy")
++	}
++	for _, lane := range []*[]int16{&p.pending, &p.bed, &p.under, &p.bell} {
++		*lane = []int16{1, 1}
++		if p.IdleForAnnouncement() {
++			t.Fatal("lane ignored")
++		}
++		*lane = nil
++	}
++	p.lastAudibleNano.Store(time.Now().UnixNano())
++	if p.IdleForAnnouncement() {
++		t.Fatal("hardware tail ignored")
++	}
++}
+diff --git a/echod/internal/hardware/speaker/sink.go b/echod/internal/hardware/speaker/sink.go
+index 107be40..6f0afa5 100644
+--- a/echod/internal/hardware/speaker/sink.go
++++ b/echod/internal/hardware/speaker/sink.go
+@@ -60,6 +60,7 @@ type sinkState struct {
+ // SetSink routes playback to s until it is cleared with nil. The previous sink, if any, is closed.
+ // name is for the log. rate and channels are what s expects.
+ func (p *Player) SetSink(s Sink, name string, rate, channels int) {
++	p.outputEpoch.Add(1)
+ 	var st *sinkState
+ 	if s != nil {
+ 		if channels < 1 || channels > 2 || rate <= 0 {
+diff --git a/echod/internal/hardware/speaker/speaker.go b/echod/internal/hardware/speaker/speaker.go
+index 8120478..db4b5b2 100644
+--- a/echod/internal/hardware/speaker/speaker.go
++++ b/echod/internal/hardware/speaker/speaker.go
+@@ -177,7 +177,9 @@ type Player struct {
+ 	underruns atomic.Uint64
+ 
+ 	// deaf counts what was thrown away for want of a device.
+-	deaf atomic.Uint64
++	deaf            atomic.Uint64
++	outputEpoch     atomic.Uint64
++	lastAudibleNano atomic.Int64
+ 
+ 	mu      sync.Mutex
+ 	pending []int16 // interleaved stereo waiting to go out
+@@ -472,6 +474,7 @@ func (p *Player) unmute() {
+ 
+ // stopped holds the amplifier's mute again as the stream ends, for whatever reason it ends.
+ func (p *Player) stopped() {
++	p.outputEpoch.Add(1)
+ 	p.playing.Store(false)
+ 	if MuteSwitch == "" {
+ 		return
+@@ -523,6 +526,7 @@ func (p *Player) setOutput(out Output) {
+ 		p.pathMu.Unlock()
+ 		return
+ 	}
++	p.outputEpoch.Add(1)
+ 	p.out = out
+ 	p.outNow.Store(out)
+ 	// The tuning's history is of what went out the old way: Headphone to Both starts it again, and
+@@ -812,6 +816,7 @@ func (p *Player) Run(ctx context.Context) error {
+ // in the format of the output it then has. The format's routes can change what the output's path set
+ // (the jack's mutes the amplifier), so the path is written again once the stream is open.
+ func (p *Player) reformat(ctx context.Context, pb playback, want cardFormat) (playback, error) {
++	p.outputEpoch.Add(1)
+ 	_, mixer := p.device()
+ 	_ = pb.Close()
+ 	// Nothing holds a stream until the new one opens, so a Close meanwhile (a shutdown during a wait
+@@ -922,6 +927,9 @@ func (p *Player) fill(buf []byte) {
+ 	rang := min(len(p.bell), period*Channels)
+ 	bell := p.bell[:rang]
+ 	p.bell = p.bell[rang:]
++	if take > 0 || bedTake > 0 || underTake > 0 || rang > 0 {
++		p.lastAudibleNano.Store(time.Now().UnixNano())
++	}
+ 	if len(p.bell) == 0 {
+ 		p.bell = nil
+ 	}
+@@ -1454,6 +1462,7 @@ func (p *Player) Volume() float32 { return math.Float32frombits(p.volume.Load())
+ // The Player stays usable:
+ // Start can take it again, which is how a restart works.
+ func (p *Player) Close() error {
++	p.outputEpoch.Add(1)
+ 	p.initializeMixer()
+ 
+ 	p.devMu.Lock()
+@@ -1569,3 +1578,38 @@ func (p *Player) initializeMixer() {
+ 	}
+ 	p.apply(initSequence)
+ }
++
++// PlaybackProof identifies one uninterrupted local output generation. It proves
++// software drain, not acoustic quality or that a person heard the message.
++type PlaybackProof struct{ Epoch, Dropped, Underruns, Written uint64 }
++
++func (p *Player) PlaybackProof() (PlaybackProof, error) {
++	pb, _ := p.device()
++	if pb == nil || !p.playing.Load() || p.sink.Load() != nil {
++		return PlaybackProof{}, fmt.Errorf("local output unavailable")
++	}
++	return PlaybackProof{p.outputEpoch.Load(), p.deaf.Load(), p.underruns.Load(), p.written.Load()}, nil
++}
++func (p *Player) VerifyPlayback(before PlaybackProof) error {
++	after, err := p.PlaybackProof()
++	if err != nil {
++		return err
++	}
++	if after.Epoch != before.Epoch || after.Dropped != before.Dropped || after.Underruns != before.Underruns || after.Written <= before.Written || p.Queued() != 0 {
++		return fmt.Errorf("output did not drain uninterrupted")
++	}
++	return nil
++}
++
++// IdleForAnnouncement includes all output lanes and the tail already handed to
++// hardware. A media Source remains busy even when its next buffer is silence.
++func (p *Player) IdleForAnnouncement() bool {
++	p.mu.Lock()
++	busy := len(p.pending)+len(p.bed)+len(p.under)+len(p.bell) > 0
++	recent := time.Since(time.Unix(0, p.lastAudibleNano.Load())) < HardwareTail
++	p.mu.Unlock()
++	p.srcMu.Lock()
++	hasSource := p.src != nil
++	p.srcMu.Unlock()
++	return !busy && !recent && !hasSource
++}
+diff --git a/echod/internal/lib/activitygate/gate.go b/echod/internal/lib/activitygate/gate.go
+new file mode 100644
+index 0000000..6239409
+--- /dev/null
++++ b/echod/internal/lib/activitygate/gate.go
+@@ -0,0 +1,87 @@
++// Package activitygate coordinates ordinary device activity with a one-way announcement.
++// It contains no device, network or audio operations and is independently race-tested.
++package activitygate
++
++import (
++	"context"
++	"sync"
++	"sync/atomic"
++	"time"
++)
++
++type Gate struct {
++	mu     sync.RWMutex
++	active atomic.Pointer[Lease]
++}
++type Lease struct {
++	gate   *Gate
++	ctx    context.Context
++	cancel context.CancelFunc
++	done   chan struct{}
++	once   sync.Once
++	reason atomic.Pointer[string]
++}
++
++var Device Gate
++
++// Enter admits ordinary activity. It first cancels an announcement, then waits for
++// that exact owner's queue to drain. Failure is busy, never permission to overlap.
++func (g *Gate) Enter() (func(), bool) {
++	deadline := time.NewTimer(2 * time.Second)
++	defer deadline.Stop()
++	for {
++		if g.mu.TryRLock() {
++			return g.mu.RUnlock, true
++		}
++		l := g.active.Load()
++		if l == nil {
++			return nil, false
++		}
++		l.Cancel("preempted")
++		select {
++		case <-l.done:
++		case <-deadline.C:
++			return nil, false
++		}
++	}
++}
++
++// Reserve checks all state under the same admission barrier used by ordinary
++// activity. A rejected reservation never disturbs that activity.
++func (g *Gate) Reserve(until time.Time, idle func() string) (*Lease, string) {
++	if !g.mu.TryLock() {
++		return nil, "busy"
++	}
++	if reason := idle(); reason != "" {
++		g.mu.Unlock()
++		return nil, reason
++	}
++	ctx, cancel := context.WithDeadline(context.Background(), until)
++	l := &Lease{gate: g, ctx: ctx, cancel: cancel, done: make(chan struct{})}
++	g.active.Store(l)
++	return l, ""
++}
++func (l *Lease) Context() context.Context { return l.ctx }
++func (l *Lease) Done() <-chan struct{}    { return l.done }
++func (l *Lease) Valid() bool              { return l != nil && l.gate.active.Load() == l && l.ctx.Err() == nil }
++func (l *Lease) Cancel(reason string)     { l.reason.CompareAndSwap(nil, &reason); l.cancel() }
++func (l *Lease) Reason() string {
++	if p := l.reason.Load(); p != nil {
++		return *p
++	}
++	if l.ctx.Err() != nil {
++		return "deadline_expired"
++	}
++	return ""
++}
++func (l *Lease) Release() {
++	l.once.Do(func() { l.cancel(); l.gate.active.CompareAndSwap(l, nil); l.gate.mu.Unlock(); close(l.done) })
++}
++
++// Interrupt is safe under a configuration mutex: cancellation does not wait or
++// call the player. The owner's worker clears its own sound before releasing.
++func (g *Gate) Interrupt(reason string) {
++	if l := g.active.Load(); l != nil {
++		l.Cancel(reason)
++	}
++}
+diff --git a/echod/internal/lib/activitygate/gate_test.go b/echod/internal/lib/activitygate/gate_test.go
+new file mode 100644
+index 0000000..0578bc8
+--- /dev/null
++++ b/echod/internal/lib/activitygate/gate_test.go
+@@ -0,0 +1,87 @@
++package activitygate
++
++import (
++	"sync"
++	"sync/atomic"
++	"testing"
++	"time"
++)
++
++func TestClaimCannotOverlapAdmission(t *testing.T) {
++	var g Gate
++	leave, ok := g.Enter()
++	if !ok {
++		t.Fatal("ordinary admission")
++	}
++	if l, _ := g.Reserve(time.Now().Add(time.Minute), func() string { return "" }); l != nil {
++		t.Fatal("overlap")
++	}
++	leave()
++	l, r := g.Reserve(time.Now().Add(time.Minute), func() string { return "" })
++	if l == nil {
++		t.Fatal(r)
++	}
++	drained := make(chan struct{})
++	go func() { <-l.Context().Done(); time.Sleep(20 * time.Millisecond); close(drained); l.Release() }()
++	next, ok := g.Enter()
++	if !ok {
++		t.Fatal("preemption did not release")
++	}
++	defer next()
++	select {
++	case <-drained:
++	default:
++		t.Fatal("ordinary activity entered before owner drained")
++	}
++	if l.Reason() != "preempted" {
++		t.Fatal(l.Reason())
++	}
++}
++func TestBusyPredicateAndDeadline(t *testing.T) {
++	var g Gate
++	if l, r := g.Reserve(time.Now().Add(time.Minute), func() string { return "dnd" }); l != nil || r != "dnd" {
++		t.Fatal(l, r)
++	}
++	l, _ := g.Reserve(time.Now().Add(10*time.Millisecond), func() string { return "" })
++	defer l.Release()
++	<-l.Context().Done()
++	if l.Valid() || l.Reason() != "deadline_expired" {
++		t.Fatal("deadline did not invalidate lease")
++	}
++}
++func TestConcurrentActivitiesAndReservations(t *testing.T) {
++	var g Gate
++	var readers atomic.Int32
++	var writer atomic.Bool
++	var wg sync.WaitGroup
++	for range 16 {
++		wg.Add(1)
++		go func() {
++			defer wg.Done()
++			for range 100 {
++				leave, ok := g.Enter()
++				if !ok {
++					continue
++				}
++				readers.Add(1)
++				if writer.Load() {
++					t.Error("reader with writer")
++				}
++				readers.Add(-1)
++				leave()
++			}
++		}()
++	}
++	for range 100 {
++		l, _ := g.Reserve(time.Now().Add(time.Minute), func() string { return "" })
++		if l != nil {
++			writer.Store(true)
++			if readers.Load() != 0 {
++				t.Error("writer with reader")
++			}
++			writer.Store(false)
++			l.Release()
++		}
++	}
++	wg.Wait()
++}
+diff --git a/echod/internal/lib/guardedannounce/manager.go b/echod/internal/lib/guardedannounce/manager.go
+new file mode 100644
+index 0000000..f62f35b
+--- /dev/null
++++ b/echod/internal/lib/guardedannounce/manager.go
+@@ -0,0 +1,345 @@
++// Package guardedannounce implements durable, bounded one-way announcement jobs.
++package guardedannounce
++
++import (
++	"crypto/rand"
++	"crypto/sha256"
++	"encoding/hex"
++	"encoding/json"
++	"errors"
++	"fmt"
++	"net/url"
++	"os"
++	"path/filepath"
++	"regexp"
++	"sync"
++	"sync/atomic"
++	"time"
++
++	"github.com/HuskerMinion/techo5/echod/internal/lib/activitygate"
++)
++
++const Protocol = "cisco-announcement-v1"
++const MaxDuration = 180 * time.Second
++const maxRecords = 512
++
++var requestPattern = regexp.MustCompile(`^announce-[0-9a-f]{32}-[0-9]{3}$`)
++
++type Receipt struct {
++	RequestID string `json:"request_id"`
++	Status    string `json:"status"`
++	Reason    string `json:"reason,omitempty"`
++	Protocol  string `json:"protocol"`
++	BootID    string `json:"boot_id"`
++}
++type record struct {
++	Receipt
++	Fingerprint string `json:"fingerprint"`
++	ExpiresAt   int64  `json:"expires_at"`
++}
++type Playback func(*activitygate.Lease, func() error) error
++type Manager struct {
++	mu         sync.Mutex
++	path, boot string
++	records    map[string]record
++	leases     sync.Map
++	gate       *activitygate.Gate
++	idle       func() string
++	broken     atomic.Bool
++	saveHook   func() // tests only; nil in production
++}
++
++func Open(path string, gate *activitygate.Gate, idle func() string) (*Manager, error) {
++	b := make([]byte, 16)
++	if _, err := rand.Read(b); err != nil {
++		return nil, err
++	}
++	m := &Manager{path: path, boot: hex.EncodeToString(b), records: map[string]record{}, gate: gate, idle: idle}
++	data, err := os.ReadFile(path)
++	if err != nil && !errors.Is(err, os.ErrNotExist) {
++		return nil, err
++	}
++	if err == nil {
++		if len(data) > 1024*1024 {
++			return nil, errors.New("announcement journal too large")
++		}
++		if err = json.Unmarshal(data, &m.records); err != nil {
++			return nil, err
++		}
++		if m.records == nil {
++			return nil, errors.New("null announcement journal")
++		}
++		if len(m.records) > maxRecords {
++			return nil, errors.New("announcement journal too many records")
++		}
++	}
++	changed := false
++	for id, r := range m.records {
++		_, hashErr := hex.DecodeString(r.Fingerprint)
++		_, bootErr := hex.DecodeString(r.BootID)
++		if !requestPattern.MatchString(id) || r.RequestID != id || r.Protocol != Protocol || len(r.Fingerprint) != 64 || hashErr != nil || len(r.BootID) != 32 || bootErr != nil || r.ExpiresAt <= 0 || !validStatus(r.Status) {
++			return nil, errors.New("invalid announcement journal record")
++		}
++		if r.Status == "accepted" || r.Status == "playing" {
++			r.Status = "unknown"
++			r.Reason = "process_restarted"
++			m.records[id] = r
++			changed = true
++		}
++	}
++	if changed {
++		if err = m.save(); err != nil {
++			return nil, err
++		}
++	}
++	return m, nil
++}
++func (m *Manager) BootID() string { return m.boot }
++func (m *Manager) receipt(id, status, reason string) Receipt {
++	return Receipt{id, status, reason, Protocol, m.boot}
++}
++func (m *Manager) ValidateID(id string) bool { return requestPattern.MatchString(id) }
++func fingerprint(media string, expires int64) string {
++	s := sha256.Sum256([]byte(fmt.Sprintf("%d\n%s", expires, media)))
++	return hex.EncodeToString(s[:])
++}
++func (m *Manager) Submit(id, media string, expires int64, play Playback) Receipt {
++	m.mu.Lock()
++	if !requestPattern.MatchString(id) {
++		m.mu.Unlock()
++		return m.receipt(id, "failed", "invalid_request_id")
++	}
++	fp := fingerprint(media, expires)
++	if r, ok := m.records[id]; ok {
++		m.mu.Unlock()
++		if r.Fingerprint != fp {
++			return m.receipt(id, "failed", "request_conflict")
++		}
++		r.BootID = m.boot
++		return r.Receipt
++	}
++	now := time.Now()
++	deadline := time.Unix(expires, 0)
++	if !deadline.After(now) || deadline.Sub(now) > MaxDuration {
++		m.mu.Unlock()
++		return m.receipt(id, "failed", "invalid_expiry")
++	}
++	u, err := url.Parse(media)
++	if err != nil || len(media) > 4096 || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.User != nil || u.Fragment != "" {
++		m.mu.Unlock()
++		return m.receipt(id, "failed", "invalid_media_id")
++	}
++	if m.broken.Load() {
++		m.mu.Unlock()
++		return m.receipt(id, "unknown", "journal_unavailable")
++	}
++	for k, r := range m.records {
++		if r.ExpiresAt < now.Add(-24*time.Hour).Unix() {
++			delete(m.records, k)
++		}
++	}
++	if len(m.records) >= maxRecords {
++		m.mu.Unlock()
++		return m.receipt(id, "failed", "journal_full")
++	}
++	// Disk persistence precedes device reservation: stalled storage cannot hold audio.
++	r := record{m.receipt(id, "accepted", ""), fp, expires}
++	m.records[id] = r
++	if err = m.save(); err != nil {
++		m.broken.Store(true)
++		r.Status = "unknown"
++		r.Reason = "journal_unavailable"
++		m.records[id] = r
++		m.mu.Unlock()
++		return r.Receipt
++	}
++	if !deadline.After(time.Now()) {
++		r.Status = "failed"
++		r.Reason = "expired_before_admission"
++		m.records[id] = r
++		if err = m.save(); err != nil {
++			m.broken.Store(true)
++			r.Status = "unknown"
++			r.Reason = "journal_unavailable"
++			m.records[id] = r
++		}
++		m.mu.Unlock()
++		return r.Receipt
++	}
++	lease, reason := m.gate.Reserve(deadline, m.idle)
++	if lease == nil {
++		r.Status = "skipped"
++		r.Reason = reason
++		m.records[id] = r
++		if err = m.save(); err != nil {
++			m.broken.Store(true)
++			r.Status = "unknown"
++			r.Reason = "journal_unavailable"
++			m.records[id] = r
++		}
++	}
++
++	if lease != nil {
++		m.leases.Store(id, lease)
++	}
++	m.mu.Unlock()
++	if lease != nil {
++		go m.run(id, lease, play)
++	}
++	return r.Receipt
++}
++func (m *Manager) run(id string, lease *activitygate.Lease, play Playback) {
++	defer lease.Release()
++	defer func() {
++		lease.Release()
++		if recover() != nil {
++			m.update(id, "unknown", "playback_panicked", true)
++		}
++		m.leases.Delete(id)
++	}()
++	marked := false
++	mark := func() error {
++		if err := lease.Context().Err(); err != nil {
++			return err
++		}
++		r := m.update(id, "playing", "", false)
++		if r.Status != "playing" {
++			return errors.New(r.Reason)
++		}
++		if err := lease.Context().Err(); err != nil {
++			return err
++		}
++		marked = true
++		return nil
++	}
++	err := play(lease, mark)
++	status, reason := "completed", ""
++	if lease.Context().Err() != nil {
++		status, reason = "stopped", lease.Reason()
++	} else if err != nil || !marked {
++		status, reason = "failed", "playback_failed"
++	}
++	lease.Release() // owned audio and hardware tail have drained
++	m.update(id, status, reason, true)
++}
++func (m *Manager) update(id, status, reason string, persist bool) Receipt {
++	if persist {
++		m.mu.Lock()
++	} else if !m.lockBriefly() {
++		return m.receipt(id, "unknown", "journal_busy")
++	}
++	r := m.records[id]
++	r.Status = status
++	r.Reason = reason
++	r.BootID = m.boot
++	m.records[id] = r
++	if err := func() error {
++		if persist {
++			return m.save()
++		}
++		return nil
++	}(); err != nil {
++		m.broken.Store(true)
++		r.Status = "unknown"
++		r.Reason = "journal_unavailable"
++		m.records[id] = r
++	}
++	m.mu.Unlock()
++	return r.Receipt
++}
++func (m *Manager) Status(id string) Receipt {
++	if !m.mu.TryLock() {
++		return m.receipt(id, "unknown", "journal_busy")
++	}
++	defer m.mu.Unlock()
++	if r, ok := m.records[id]; ok {
++		r.BootID = m.boot
++		return r.Receipt
++	}
++	return m.receipt(id, "unknown", "request_not_found")
++}
++func (m *Manager) Stop(id string) Receipt {
++	var l *activitygate.Lease
++	if value, ok := m.leases.Load(id); ok {
++		l = value.(*activitygate.Lease)
++	}
++	if l != nil {
++		l.Cancel("requested")
++		select {
++		case <-l.Done():
++		case <-time.After(2 * time.Second):
++			return m.receipt(id, "unknown", "stop_pending")
++		}
++	}
++	r := m.Status(id)
++	if l != nil && (r.Status == "accepted" || r.Status == "playing") {
++		return m.receipt(id, "unknown", "stop_pending")
++	}
++	return r
++}
++func (m *Manager) save() error {
++	if m.saveHook != nil {
++		m.saveHook()
++	}
++	data, err := json.Marshal(m.records)
++	if err != nil {
++		return err
++	}
++	dir := filepath.Dir(m.path)
++	if err = os.MkdirAll(dir, 0700); err != nil {
++		return err
++	}
++	f, err := os.CreateTemp(dir, ".announcements-*")
++	if err != nil {
++		return err
++	}
++	name := f.Name()
++	defer os.Remove(name)
++	if err = f.Chmod(0600); err == nil {
++		_, err = f.Write(data)
++	}
++	if err == nil {
++		err = f.Sync()
++	}
++	closeErr := f.Close()
++	if err == nil {
++		err = closeErr
++	}
++	if err != nil {
++		return err
++	}
++	if err = os.Rename(name, m.path); err != nil {
++		return err
++	}
++	d, err := os.Open(dir)
++	if err != nil {
++		return err
++	}
++	defer d.Close()
++	return d.Sync()
++}
++
++func validStatus(s string) bool {
++	switch s {
++	case "accepted", "playing", "completed", "skipped", "failed", "stopped", "unknown":
++		return true
++	}
++	return false
++}
++
++func (m *Manager) Healthy() bool { return !m.broken.Load() }
++
++// State publication inside the audio lease may wait for contention, never for an
++// unbounded filesystem operation owned by another submission.
++func (m *Manager) lockBriefly() bool {
++	until := time.Now().Add(100 * time.Millisecond)
++	for {
++		if m.mu.TryLock() {
++			return true
++		}
++		if !time.Now().Before(until) {
++			return false
++		}
++		time.Sleep(time.Millisecond)
++	}
++}
+diff --git a/echod/internal/lib/guardedannounce/manager_test.go b/echod/internal/lib/guardedannounce/manager_test.go
+new file mode 100644
+index 0000000..440044d
+--- /dev/null
++++ b/echod/internal/lib/guardedannounce/manager_test.go
+@@ -0,0 +1,269 @@
++package guardedannounce
++
++import (
++	"encoding/json"
++	"errors"
++	"github.com/HuskerMinion/techo5/echod/internal/lib/activitygate"
++	"os"
++	"path/filepath"
++	"sync"
++	"sync/atomic"
++	"testing"
++	"time"
++)
++
++const id = "announce-0123456789abcdef0123456789abcdef-223"
++const other = "announce-abcdef0123456789abcdef0123456789-224"
++const media = "http://ha.invalid/file.wav"
++
++func manager(t *testing.T, idle func() string) *Manager {
++	t.Helper()
++	m, e := Open(filepath.Join(t.TempDir(), "jobs.json"), new(activitygate.Gate), idle)
++	if e != nil {
++		t.Fatal(e)
++	}
++	return m
++}
++func wait(t *testing.T, m *Manager, want string) {
++	t.Helper()
++	until := time.Now().Add(3 * time.Second)
++	for time.Now().Before(until) {
++		if m.Status(id).Status == want {
++			return
++		}
++		time.Sleep(time.Millisecond)
++	}
++	t.Fatal(m.Status(id))
++}
++func TestDurableReceiptBeforePlaybackAndDedup(t *testing.T) {
++	m := manager(t, func() string { return "" })
++	expires := time.Now().Add(time.Minute).Unix()
++	var played atomic.Int32
++	done := make(chan struct{})
++	play := func(l *activitygate.Lease, mark func() error) error {
++		var records map[string]record
++		b, e := os.ReadFile(m.path)
++		if e != nil {
++			t.Error(e)
++		}
++		if e = json.Unmarshal(b, &records); e != nil {
++			t.Error(e)
++		}
++		if records[id].Status != "accepted" {
++			t.Error("not durable before playback")
++		}
++		played.Add(1)
++		if e = mark(); e != nil {
++			return e
++		}
++		<-done
++		return nil
++	}
++	var wg sync.WaitGroup
++	for range 12 {
++		wg.Add(1)
++		go func() {
++			defer wg.Done()
++			r := m.Submit(id, media, expires, play)
++			if r.Status != "accepted" && r.Status != "playing" {
++				t.Error(r)
++			}
++		}()
++	}
++	wg.Wait()
++	wait(t, m, "playing")
++	if played.Load() != 1 {
++		t.Fatal(played.Load())
++	}
++	if m.Submit(id, media+"?changed", expires, play).Reason != "request_conflict" {
++		t.Fatal("conflicting request accepted")
++	}
++	close(done)
++	wait(t, m, "completed")
++	restored, e := Open(m.path, new(activitygate.Gate), func() string { return "" })
++	if e != nil {
++		t.Fatal(e)
++	}
++	if restored.Submit(id, media, expires, play).Status != "completed" || played.Load() != 1 {
++		t.Fatal("replayed completed request")
++	}
++}
++func TestIdlePoliciesNeverPlay(t *testing.T) {
++	for _, reason := range []string{"phone_busy", "assist_busy", "audio_busy", "do_not_disturb", "quiet_hours"} {
++		t.Run(reason, func(t *testing.T) {
++			m := manager(t, func() string { return reason })
++			r := m.Submit(id, media, time.Now().Add(time.Minute).Unix(), func(*activitygate.Lease, func() error) error { t.Error("played busy"); return nil })
++			if r.Status != "skipped" || r.Reason != reason {
++				t.Fatal(r)
++			}
++		})
++	}
++}
++func TestOwnedStopAndOrdinaryPreemption(t *testing.T) {
++	m := manager(t, func() string { return "" })
++	started := make(chan struct{})
++	drained := make(chan struct{})
++	m.Submit(id, media, time.Now().Add(time.Minute).Unix(), func(l *activitygate.Lease, mark func() error) error {
++		if e := mark(); e != nil {
++			return e
++		}
++		close(started)
++		<-l.Context().Done()
++		close(drained)
++		return l.Context().Err()
++	})
++	<-started
++	if m.Stop(other).Status != "unknown" {
++		t.Fatal("unknown cancel")
++	}
++	if m.Status(id).Status != "playing" {
++		t.Fatal("canceled wrong owner")
++	}
++	leave, ok := m.gate.Enter()
++	if !ok {
++		t.Fatal("preemption failed")
++	}
++	leave()
++	select {
++	case <-drained:
++	default:
++		t.Fatal("entered before drain")
++	}
++	wait(t, m, "stopped")
++	if m.Status(id).Reason != "preempted" {
++		t.Fatal(m.Status(id))
++	}
++}
++func TestRequestedStopAndFailure(t *testing.T) {
++	m := manager(t, func() string { return "" })
++	m.Submit(id, media, time.Now().Add(time.Minute).Unix(), func(l *activitygate.Lease, mark func() error) error {
++		if e := mark(); e != nil {
++			return e
++		}
++		<-l.Context().Done()
++		return l.Context().Err()
++	})
++	wait(t, m, "playing")
++	r := m.Stop(id)
++	if r.Status != "stopped" && r.Status != "unknown" {
++		t.Fatal(r)
++	}
++	wait(t, m, "stopped")
++	if m.Status(id).Reason != "requested" {
++		t.Fatal(m.Status(id))
++	}
++	m2 := manager(t, func() string { return "" })
++	m2.Submit(id, media, time.Now().Add(time.Minute).Unix(), func(*activitygate.Lease, func() error) error { return errors.New("failed fetch") })
++	wait(t, m2, "failed")
++}
++func TestRestartUnknownNeverReplay(t *testing.T) {
++	m := manager(t, func() string { return "" })
++	exp := time.Now().Add(time.Minute).Unix()
++	m.records[id] = record{m.receipt(id, "playing", ""), fingerprint(media, exp), exp}
++	if e := m.save(); e != nil {
++		t.Fatal(e)
++	}
++	n, e := Open(m.path, new(activitygate.Gate), func() string { return "" })
++	if e != nil {
++		t.Fatal(e)
++	}
++	r := n.Submit(id, media, exp, func(*activitygate.Lease, func() error) error { t.Error("replayed"); return nil })
++	if r.Status != "unknown" || r.Reason != "process_restarted" {
++		t.Fatal(r)
++	}
++}
++func TestRejectCorruptJournalAndStorageFailure(t *testing.T) {
++	for _, b := range []string{"null", "[]", "{broken", `{"id":{"status":"completed"}}`} {
++		p := filepath.Join(t.TempDir(), "journal")
++		os.WriteFile(p, []byte(b), 0600)
++		if _, e := Open(p, new(activitygate.Gate), func() string { return "" }); e == nil {
++			t.Fatal(b)
++		}
++	}
++	m := manager(t, func() string { return "" })
++	os.Mkdir(m.path, 0700)
++	r := m.Submit(id, media, time.Now().Add(time.Minute).Unix(), func(*activitygate.Lease, func() error) error { t.Error("played without durable journal"); return nil })
++	if r.Status != "unknown" || m.Status(id).Status != "unknown" {
++		t.Fatal(r, m.Status(id))
++	}
++}
++func TestExpiredAndInvalidRequests(t *testing.T) {
++	m := manager(t, func() string { return "" })
++	play := func(*activitygate.Lease, func() error) error { t.Error("invalid playback"); return nil }
++	for _, ex := range []int64{time.Now().Unix() - 1, time.Now().Add(181 * time.Second).Unix()} {
++		if m.Submit(id, media, ex, play).Status != "failed" {
++			t.Fatal("bad deadline")
++		}
++	}
++	for _, u := range []string{"file:///tmp/a", "http://u:p@ha/a", "http://ha/a#b", ""} {
++		if m.Submit(id, u, time.Now().Add(time.Minute).Unix(), play).Status != "failed" {
++			t.Fatal(u)
++		}
++	}
++}
++
++func TestBlockedPersistenceDoesNotHoldAudioGate(t *testing.T) {
++	for _, blockWrite := range []int32{1, 2} {
++		t.Run(string(rune('0'+blockWrite)), func(t *testing.T) {
++			m := manager(t, func() string { return "" })
++			entered := make(chan struct{})
++			release := make(chan struct{})
++			var writes atomic.Int32
++			m.saveHook = func() {
++				if writes.Add(1) == blockWrite {
++					close(entered)
++					<-release
++				}
++			}
++			returned := make(chan Receipt, 1)
++			go func() {
++				returned <- m.Submit(id, media, time.Now().Add(time.Minute).Unix(), func(l *activitygate.Lease, mark func() error) error { return mark() })
++			}()
++			select {
++			case <-entered:
++			case <-time.After(3 * time.Second):
++				t.Fatal("persistence did not block")
++			}
++			leave, ok := m.gate.Enter()
++			if !ok {
++				t.Error("blocked filesystem held audio gate")
++			} else {
++				leave()
++			}
++			stopped := make(chan Receipt, 1)
++			go func() { stopped <- m.Stop(id) }()
++			select {
++			case <-stopped:
++			case <-time.After(time.Second):
++				t.Error("Stop blocked on filesystem mutex")
++			}
++			close(release)
++			select {
++			case <-returned:
++			case <-time.After(3 * time.Second):
++				t.Fatal("submit did not return")
++			}
++			wait(t, m, "completed")
++		})
++	}
++}
++
++func TestHealthCheckDoesNotWaitForJournalLock(t *testing.T) {
++	m := manager(t, func() string { return "" })
++	m.mu.Lock()
++	defer m.mu.Unlock()
++	done := make(chan bool, 1)
++	go func() { done <- m.Healthy() }()
++	select {
++	case healthy := <-done:
++		if !healthy {
++			t.Fatal("unexpected failed health")
++		}
++	case <-time.After(time.Second):
++		t.Fatal("health blocked on journal lock")
++	}
++	m.broken.Store(true)
++	if m.Healthy() {
++		t.Fatal("broken health not visible")
++	}
++}
