@@ -3,7 +3,12 @@
 This is a capability audit of an Echo Dot 2 running **TECHO5 v1.0.40** on
 October 29, 2026. A live Home Assistant inventory found **186 entities and 44
 native actions**. USB inspection confirmed the installed release and tools.
-The audit did not enable services, record audio, play media or place calls.
+The initial audit did not enable services, record audio, play media or place
+calls. The subsequent implementation is documented in the
+[deployment record](capability-deployment.md),
+[HA controls guide](capability-package.md) and
+[access and receiver guide](capability-access.md). The observed-state table
+below is the original baseline, not a current deployment inventory.
 
 The most useful architecture is a small audio/sensor endpoint with Home
 Assistant automations and local server-side speech, history and reasoning.

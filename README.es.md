@@ -15,3 +15,6 @@ Guías detalladas, actualmente en inglés: [estado](docs/status.md), [migración
 [Actualización a v1.0.35 mediante HA](docs/updates.md).
 
 Consulta la [auditoría de funciones y el plan de ampliación](docs/capabilities.md), con catálogo de acciones y tarjeta de diagnóstico (en inglés).
+[Funciones adicionales de HA](docs/capability-package.md): anillo, temporizadores,
+alarmas, recordatorios, anuncios y diagnóstico. [Acceso y medios](docs/capability-access.md)
+e [informe de implementación](docs/capability-deployment.md), en inglés.

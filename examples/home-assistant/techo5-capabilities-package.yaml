@@ -1,0 +1,1312 @@
+{
+  "input_boolean": {
+    "techo5_example_enabled": {
+      "name": "TECHO5 example additional controls",
+      "icon": "mdi:toggle-switch"
+    },
+    "techo5_example_clap_light": {
+      "name": "TECHO5 example clap light control",
+      "icon": "mdi:hand-clap"
+    },
+    "techo5_example_button_energy": {
+      "name": "TECHO5 example Action hold energy",
+      "icon": "mdi:gesture-tap-hold"
+    },
+    "techo5_example_energy_pulse": {
+      "name": "TECHO5 example periodic energy pulse",
+      "icon": "mdi:chart-donut"
+    },
+    "techo5_example_health_alerts": {
+      "name": "TECHO5 example availability notices",
+      "icon": "mdi:heart-pulse"
+    }
+  },
+  "input_number": {
+    "techo5_example_timer_minutes": {
+      "name": "TECHO5 example timer minutes",
+      "min": 1,
+      "max": 180,
+      "step": 1,
+      "initial": 5,
+      "unit_of_measurement": "min",
+      "mode": "box"
+    },
+    "techo5_example_volume_cap": {
+      "name": "TECHO5 example suggested volume cap",
+      "min": 10,
+      "max": 75,
+      "step": 5,
+      "initial": 60,
+      "unit_of_measurement": "%",
+      "mode": "box"
+    }
+  },
+  "input_text": {
+    "techo5_example_timer_label": {
+      "name": "TECHO5 example timer label",
+      "max": 40,
+      "initial": "Kitchen timer"
+    },
+    "techo5_example_timer_id": {
+      "name": "TECHO5 example panel timer ID",
+      "max": 80
+    },
+    "techo5_example_alarm_label": {
+      "name": "TECHO5 example alarm label or reminder text",
+      "max": 40,
+      "initial": "Wake up"
+    },
+    "techo5_example_alarm_id": {
+      "name": "TECHO5 example panel alarm ID",
+      "max": 80
+    },
+    "techo5_example_announcement": {
+      "name": "TECHO5 example short announcement",
+      "max": 60
+    },
+    "techo5_example_reminder_id": {
+      "name": "TECHO5 example panel reminder ID",
+      "max": 80
+    },
+    "techo5_example_reminder_owned_label": {
+      "name": "TECHO5 example saved reminder text",
+      "max": 40
+    }
+  },
+  "input_datetime": {
+    "techo5_example_alarm_time": {
+      "name": "TECHO5 example alarm time",
+      "has_date": false,
+      "has_time": true,
+      "initial": "07:00:00"
+    }
+  },
+  "input_select": {
+    "techo5_example_energy_source": {
+      "name": "TECHO5 example energy ring source",
+      "options": [
+        "Battery charge",
+        "Grid power"
+      ],
+      "initial": "Battery charge"
+    },
+    "techo5_example_alarm_repeat": {
+      "name": "TECHO5 example alarm repeat",
+      "options": [
+        "once",
+        "daily",
+        "weekdays",
+        "weekends"
+      ],
+      "initial": "once"
+    },
+    "techo5_example_alarm_mode": {
+      "name": "TECHO5 example alarm mode",
+      "options": [
+        "Sound and ring",
+        "Light only",
+        "Spoken reminder"
+      ],
+      "initial": "Sound and ring"
+    }
+  },
+  "template": [
+    {
+      "binary_sensor": [
+        {
+          "name": "TECHO5 example connected",
+          "unique_id": "techo5_example_connected",
+          "device_class": "connectivity",
+          "state": "{{ has_value('assist_satellite.echo_dot_example_assist_satellite') and has_value('sensor.echo_dot_example_last_boot') and states('light.echo_dot_example_ring_led_ring') in ['on', 'off'] }}"
+        },
+        {
+          "name": "TECHO5 example ready",
+          "unique_id": "techo5_example_ready",
+          "state": "{{ is_state('assist_satellite.echo_dot_example_assist_satellite', 'idle') and states('media_player.echo_dot_example_speaker') in ['idle', 'paused', 'off'] and is_state('sensor.echo_dot_example_now_playing_state', 'idle') and is_state('binary_sensor.echo_dot_example_sounding', 'off') and is_state('binary_sensor.echo_dot_example_alarm_sounding', 'off') and is_state('binary_sensor.echo_dot_example_timer_sounding', 'off') and is_state('switch.echo_dot_example_microphone_microphone_mute', 'off') and states('sensor.echo_dot_example_phone_call') == '' and states('update.echo_dot_example_firmware') in ['on','off'] and state_attr('update.echo_dot_example_firmware', 'in_progress') == false and states('light.echo_dot_example_ring_led_ring') in ['on','off'] }}",
+          "delay_on": "00:00:02"
+        }
+      ],
+      "sensor": [
+        {
+          "name": "TECHO5 example media profile",
+          "unique_id": "techo5_example_media_profile",
+          "state": "{{ 'Wi-Fi + BLE' if is_state('switch.echo_dot_example_bluetooth_proxy', 'on') and is_state('switch.echo_dot_example_bluetooth_phone', 'off') else 'Bluetooth speaker' if is_state('switch.echo_dot_example_bluetooth_proxy', 'off') and is_state('switch.echo_dot_example_bluetooth_phone', 'on') else 'Radio contention' if is_state('switch.echo_dot_example_bluetooth_proxy', 'on') and is_state('switch.echo_dot_example_bluetooth_phone', 'on') else 'Other / unavailable' }}"
+        },
+        {
+          "name": "TECHO5 example suggested volume",
+          "unique_id": "techo5_example_suggested_volume",
+          "unit_of_measurement": "%",
+          "availability": "{{ is_state('switch.echo_dot_example_microphone_ambient_noise_sensor', 'on') and is_number(states('sensor.echo_dot_example_microphone_ambient_noise')) and -120 <= states('sensor.echo_dot_example_microphone_ambient_noise')|float <= 0 and 0 <= as_timestamp(now()) - as_timestamp(states['sensor.echo_dot_example_microphone_ambient_noise'].last_updated) <= 600 }}",
+          "state": "{{ [states('input_number.techo5_example_volume_cap')|float(60), 30 if states('sensor.echo_dot_example_microphone_ambient_noise')|float(-120) < -50 else 45 if states('sensor.echo_dot_example_microphone_ambient_noise')|float(-120) < -35 else 60]|min|round(0) }}"
+        }
+      ]
+    }
+  ],
+  "script": {
+    "techo5_example_ring_scene": {
+      "alias": "TECHO5 example: temporary ring scene",
+      "mode": "single",
+      "max_exceeded": "silent",
+      "sequence": [
+        {
+          "condition": "state",
+          "entity_id": "input_boolean.techo5_example_enabled",
+          "state": "on"
+        },
+        {
+          "condition": "state",
+          "entity_id": "binary_sensor.techo5_example_ready",
+          "state": "on"
+        },
+        {
+          "condition": "template",
+          "value_template": "{{ look in ['Energy', 'Night light', 'Information', 'Complete'] }}"
+        },
+        {
+          "variables": {
+            "seconds": "{{ [30, [1, duration|default(8)|int(8)]|max]|min }}",
+            "rgb": "{% if look == 'Night light' %}{{ [255, 120, 20] }}{% elif look == 'Complete' %}{{ [20, 200, 70] }}{% elif look == 'Information' %}{{ [40, 100, 255] }}{% elif is_state('input_select.techo5_example_energy_source', 'Battery charge') and is_number(states('sensor.example_battery_soc')) and 0 <= states('sensor.example_battery_soc')|float <= 100 %}{{ [220, 30, 25] if states('sensor.example_battery_soc')|float < 25 else [255, 145, 15] if states('sensor.example_battery_soc')|float < 60 else [30, 200, 80] }}{% elif is_state('input_select.techo5_example_energy_source', 'Grid power') and is_number(states('sensor.example_grid_power')) %}{{ [255, 145, 15] if states('sensor.example_grid_power')|float > 50 else [20, 130, 255] if states('sensor.example_grid_power')|float < -50 else [110, 110, 110] }}{% else %}{{ [] }}{% endif %}",
+            "previous_update": "{{ as_timestamp(states['light.echo_dot_example_ring_led_ring'].last_updated) }}",
+            "level": "{{ 25 if look == 'Night light' else 40 if is_number(states('sensor.echo_dot_example_lux')) and states('sensor.echo_dot_example_lux')|float < 20 else 90 }}"
+          }
+        },
+        {
+          "condition": "template",
+          "value_template": "{{ rgb|length == 3 }}"
+        },
+        {
+          "action": "scene.create",
+          "data": {
+            "scene_id": "techo5_example_ring_previous",
+            "snapshot_entities": [
+              "light.echo_dot_example_ring_led_ring"
+            ]
+          }
+        },
+        {
+          "action": "light.turn_on",
+          "data": {
+            "rgb_color": "{{ rgb }}",
+            "brightness": "{{ level }}",
+            "effect": "None"
+          },
+          "target": {
+            "entity_id": "light.echo_dot_example_ring_led_ring"
+          }
+        },
+        {
+          "wait_template": "{{ is_state('light.echo_dot_example_ring_led_ring', 'on') and as_timestamp(states['light.echo_dot_example_ring_led_ring'].last_updated) > previous_update|float and (state_attr('light.echo_dot_example_ring_led_ring', 'brightness')|int - level|int)|abs <= 1 and state_attr('light.echo_dot_example_ring_led_ring', 'rgb_color') is not none and (state_attr('light.echo_dot_example_ring_led_ring', 'rgb_color')[0] - rgb[0])|abs <= 2 and (state_attr('light.echo_dot_example_ring_led_ring', 'rgb_color')[1] - rgb[1])|abs <= 2 and (state_attr('light.echo_dot_example_ring_led_ring', 'rgb_color')[2] - rgb[2])|abs <= 2 }}",
+          "timeout": "00:00:03",
+          "continue_on_timeout": true
+        },
+        {
+          "variables": {
+            "owned_update": "{{ as_timestamp(states['light.echo_dot_example_ring_led_ring'].last_updated) if wait.completed else 0 }}"
+          }
+        },
+        {
+          "wait_template": "{{ not is_state('binary_sensor.techo5_example_ready', 'on') or not is_state('input_boolean.techo5_example_enabled', 'on') }}",
+          "timeout": {
+            "seconds": "{{ seconds }}"
+          },
+          "continue_on_timeout": true
+        },
+        {
+          "wait_template": "{{ is_state('binary_sensor.techo5_example_ready', 'on') }}",
+          "timeout": "00:02:00",
+          "continue_on_timeout": true
+        },
+        {
+          "if": [
+            {
+              "condition": "template",
+              "value_template": "{{ wait.completed and owned_update|float > 0 and as_timestamp(states['light.echo_dot_example_ring_led_ring'].last_updated) == owned_update|float and is_state('light.echo_dot_example_ring_led_ring', 'on') and (state_attr('light.echo_dot_example_ring_led_ring', 'brightness')|int - level|int)|abs <= 1 }}"
+            }
+          ],
+          "then": [
+            {
+              "action": "scene.turn_on",
+              "target": {
+                "entity_id": "scene.techo5_example_ring_previous"
+              }
+            }
+          ]
+        },
+        {
+          "action": "scene.delete",
+          "data": {
+            "entity_id": "scene.techo5_example_ring_previous"
+          }
+        }
+      ],
+      "description": "Bounded indication; native voice, mute, playback, calls, updates and alarms take priority. Restores only a ring state that nobody changed.",
+      "fields": {
+        "look": {
+          "required": true,
+          "selector": {
+            "select": {
+              "options": [
+                "Energy",
+                "Night light",
+                "Information",
+                "Complete"
+              ]
+            }
+          }
+        },
+        "duration": {
+          "default": 8,
+          "selector": {
+            "number": {
+              "min": 1,
+              "max": 30,
+              "unit_of_measurement": "s",
+              "mode": "box"
+            }
+          }
+        }
+      }
+    },
+    "techo5_example_ring_off": {
+      "alias": "TECHO5 example: clear manual ring",
+      "mode": "single",
+      "max_exceeded": "silent",
+      "sequence": [
+        {
+          "condition": "state",
+          "entity_id": "input_boolean.techo5_example_enabled",
+          "state": "on"
+        },
+        {
+          "condition": "state",
+          "entity_id": "binary_sensor.techo5_example_ready",
+          "state": "on"
+        },
+        {
+          "action": "light.turn_off",
+          "target": {
+            "entity_id": "light.echo_dot_example_ring_led_ring"
+          }
+        }
+      ],
+      "description": "Explicitly turn off the manual ring layer while idle. This does not stop an alarm, call or voice turn."
+    },
+    "techo5_example_media_profile": {
+      "alias": "TECHO5 example: set media profile",
+      "mode": "single",
+      "max_exceeded": "silent",
+      "sequence": [
+        {
+          "condition": "state",
+          "entity_id": "input_boolean.techo5_example_enabled",
+          "state": "on"
+        },
+        {
+          "condition": "state",
+          "entity_id": "binary_sensor.techo5_example_ready",
+          "state": "on"
+        },
+        {
+          "condition": "template",
+          "value_template": "{{ profile in ['Wi-Fi + BLE', 'Bluetooth speaker'] }}"
+        },
+        {
+          "condition": "template",
+          "value_template": "{{ states('switch.echo_dot_example_bluetooth_proxy') in ['on','off'] and states('switch.echo_dot_example_bluetooth_phone') in ['on','off'] and states('switch.echo_dot_example_bluetooth_pairing') in ['on','off'] }}"
+        },
+        {
+          "action": "switch.turn_off",
+          "target": {
+            "entity_id": "switch.echo_dot_example_bluetooth_pairing"
+          }
+        },
+        {
+          "choose": [
+            {
+              "conditions": "{{ profile == 'Wi-Fi + BLE' }}",
+              "sequence": [
+                {
+                  "action": "switch.turn_off",
+                  "target": {
+                    "entity_id": "switch.echo_dot_example_bluetooth_phone"
+                  }
+                },
+                {
+                  "wait_template": "{{ is_state('switch.echo_dot_example_bluetooth_phone', 'off') and is_state('switch.echo_dot_example_bluetooth_pairing', 'off') }}",
+                  "timeout": "00:00:10",
+                  "continue_on_timeout": false
+                },
+                {
+                  "condition": "state",
+                  "entity_id": "binary_sensor.techo5_example_ready",
+                  "state": "on"
+                },
+                {
+                  "action": "switch.turn_on",
+                  "target": {
+                    "entity_id": [
+                      "switch.echo_dot_example_bluetooth_proxy",
+                      "switch.echo_dot_example_playback_sendspin"
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
+          "default": [
+            {
+              "action": "switch.turn_off",
+              "target": {
+                "entity_id": "switch.echo_dot_example_bluetooth_proxy"
+              }
+            },
+            {
+              "wait_template": "{{ is_state('switch.echo_dot_example_bluetooth_proxy', 'off') and is_state('switch.echo_dot_example_bluetooth_pairing', 'off') }}",
+              "timeout": "00:00:10",
+              "continue_on_timeout": false
+            },
+            {
+              "condition": "state",
+              "entity_id": "binary_sensor.techo5_example_ready",
+              "state": "on"
+            },
+            {
+              "action": "switch.turn_on",
+              "target": {
+                "entity_id": "switch.echo_dot_example_bluetooth_phone"
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Manual switch between BLE scanning and Bluetooth speaker mode. Pairing is never enabled automatically. AirPlay/DLNA settings are retained.",
+      "fields": {
+        "profile": {
+          "required": true,
+          "selector": {
+            "select": {
+              "options": [
+                "Wi-Fi + BLE",
+                "Bluetooth speaker"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "techo5_example_timer_start": {
+      "alias": "TECHO5 example: start local timer",
+      "mode": "single",
+      "max_exceeded": "silent",
+      "sequence": [
+        {
+          "condition": "state",
+          "entity_id": "input_boolean.techo5_example_enabled",
+          "state": "on"
+        },
+        {
+          "condition": "state",
+          "entity_id": "binary_sensor.techo5_example_connected",
+          "state": "on"
+        },
+        {
+          "variables": {
+            "minutes": "{{ states('input_number.techo5_example_timer_minutes')|int(0) }}",
+            "label": "{{ 'techo5_example: ' ~ states('input_text.techo5_example_timer_label')|trim }}"
+          }
+        },
+        {
+          "condition": "template",
+          "value_template": "{{ 1 <= minutes <= 180 and label|length <= 80 }}"
+        },
+        {
+          "action": "esphome.echo_dot_example_timer_start",
+          "data": {
+            "duration": "{{ minutes|string ~ ' minutes' }}",
+            "label": "{{ label }}"
+          },
+          "response_variable": "started"
+        },
+        {
+          "condition": "template",
+          "value_template": "{{ started is mapping and started.id is defined and started.id is string and started.id.startswith('local:') and started.id|length <= 80 }}"
+        },
+        {
+          "action": "input_text.set_value",
+          "data": {
+            "value": "{{ started.id }}"
+          },
+          "target": {
+            "entity_id": "input_text.techo5_example_timer_id"
+          }
+        }
+      ],
+      "description": "Creates a device-owned timer and remembers its ID. Older timers are not canceled; this panel subsequently controls the most recently created timer."
+    },
+    "techo5_example_timer_control": {
+      "alias": "TECHO5 example: control panel timer",
+      "mode": "single",
+      "max_exceeded": "silent",
+      "sequence": [
+        {
+          "condition": "state",
+          "entity_id": "input_boolean.techo5_example_enabled",
+          "state": "on"
+        },
+        {
+          "condition": "state",
+          "entity_id": "binary_sensor.techo5_example_connected",
+          "state": "on"
+        },
+        {
+          "condition": "template",
+          "value_template": "{{ operation in ['pause','resume','cancel','add five minutes'] }}"
+        },
+        {
+          "variables": {
+            "owned_id": "{{ states('input_text.techo5_example_timer_id') }}"
+          }
+        },
+        {
+          "condition": "template",
+          "value_template": "{{ owned_id.startswith('local:') and owned_id|length <= 80 }}"
+        },
+        {
+          "action": "esphome.echo_dot_example_alarms_list",
+          "response_variable": "listing"
+        },
+        {
+          "variables": {
+            "ours": "{{ listing.timers|default([])|selectattr('id','equalto',owned_id)|selectattr('local','equalto',true)|selectattr('label','match','^techo5_example: ')|list }}"
+          }
+        },
+        {
+          "condition": "template",
+          "value_template": "{{ ours|length == 1 }}"
+        },
+        {
+          "choose": [
+            {
+              "conditions": "{{ operation == 'pause' }}",
+              "sequence": [
+                {
+                  "action": "esphome.echo_dot_example_timer_pause",
+                  "data": {
+                    "id": "{{ owned_id }}"
+                  }
+                }
+              ]
+            },
+            {
+              "conditions": "{{ operation == 'resume' }}",
+              "sequence": [
+                {
+                  "action": "esphome.echo_dot_example_timer_resume",
+                  "data": {
+                    "id": "{{ owned_id }}"
+                  }
+                }
+              ]
+            },
+            {
+              "conditions": "{{ operation == 'add five minutes' }}",
+              "sequence": [
+                {
+                  "action": "esphome.echo_dot_example_timer_add",
+                  "data": {
+                    "id": "{{ owned_id }}",
+                    "duration": "5 minutes"
+                  }
+                }
+              ]
+            },
+            {
+              "conditions": "{{ operation == 'cancel' }}",
+              "sequence": [
+                {
+                  "action": "esphome.echo_dot_example_timer_cancel",
+                  "data": {
+                    "id": "{{ owned_id }}"
+                  }
+                },
+                {
+                  "action": "input_text.set_value",
+                  "data": {
+                    "value": ""
+                  },
+                  "target": {
+                    "entity_id": "input_text.techo5_example_timer_id"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "fields": {
+        "operation": {
+          "required": true,
+          "selector": {
+            "select": {
+              "options": [
+                "pause",
+                "resume",
+                "cancel",
+                "add five minutes"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "techo5_example_alarm_set": {
+      "alias": "TECHO5 example: set local alarm",
+      "mode": "single",
+      "max_exceeded": "silent",
+      "sequence": [
+        {
+          "condition": "state",
+          "entity_id": "input_boolean.techo5_example_enabled",
+          "state": "on"
+        },
+        {
+          "condition": "state",
+          "entity_id": "binary_sensor.techo5_example_connected",
+          "state": "on"
+        },
+        {
+          "variables": {
+            "at": "{{ states('input_datetime.techo5_example_alarm_time')[:5] }}",
+            "days": "{{ states('input_select.techo5_example_alarm_repeat') }}",
+            "label": "{{ 'techo5_example: ' ~ states('input_text.techo5_example_alarm_label')|trim }}",
+            "style": "{{ states('input_select.techo5_example_alarm_mode') }}"
+          }
+        },
+        {
+          "condition": "template",
+          "value_template": "{{ at|regex_match('^([01][0-9]|2[0-3]):[0-5][0-9]$') and days in ['once','daily','weekdays','weekends'] and style in ['Sound and ring','Light only','Spoken reminder'] and label|length <= 80 }}"
+        },
+        {
+          "if": [
+            {
+              "condition": "template",
+              "value_template": "{{ style == 'Spoken reminder' }}"
+            }
+          ],
+          "then": [
+            {
+              "action": "script.techo5_example_reminder_set"
+            },
+            {
+              "stop": "Spoken reminder handled separately from panel alarms"
+            }
+          ]
+        },
+        {
+          "choose": [
+            {
+              "conditions": "{{ style == 'Light only' }}",
+              "sequence": [
+                {
+                  "action": "esphome.echo_dot_example_alarm_set_light_only",
+                  "data": {
+                    "time": "{{ at }}",
+                    "days": "{{ days }}",
+                    "label": "{{ label }}"
+                  }
+                }
+              ]
+            }
+          ],
+          "default": [
+            {
+              "action": "esphome.echo_dot_example_alarm_set",
+              "data": {
+                "time": "{{ at }}",
+                "days": "{{ days }}",
+                "label": "{{ label }}"
+              }
+            }
+          ]
+        },
+        {
+          "action": "esphome.echo_dot_example_alarms_list",
+          "response_variable": "listing"
+        },
+        {
+          "variables": {
+            "ours": "{{ listing.alarms|default([])|selectattr('time','equalto',at)|selectattr('days','in',[days, 'every day' if days == 'daily' else days, 'everyday' if days == 'daily' else days])|selectattr('label','equalto',label)|rejectattr('reminder')|list }}"
+          }
+        },
+        {
+          "condition": "template",
+          "value_template": "{{ ours|length == 1 and ours[0].id is string and ours[0].id|length <= 80 }}"
+        },
+        {
+          "action": "input_text.set_value",
+          "data": {
+            "value": "{{ ours[0].id }}"
+          },
+          "target": {
+            "entity_id": "input_text.techo5_example_alarm_id"
+          }
+        }
+      ],
+      "description": "Explicitly arms an alarm or a separately tracked spoken reminder in the device time zone. Editing helpers alone does not arm it. A light-only alarm can brighten the ring before its due time."
+    },
+    "techo5_example_alarm_control": {
+      "alias": "TECHO5 example: control panel alarm",
+      "mode": "single",
+      "max_exceeded": "silent",
+      "sequence": [
+        {
+          "condition": "state",
+          "entity_id": "input_boolean.techo5_example_enabled",
+          "state": "on"
+        },
+        {
+          "condition": "state",
+          "entity_id": "binary_sensor.techo5_example_connected",
+          "state": "on"
+        },
+        {
+          "condition": "template",
+          "value_template": "{{ operation in ['enable','disable','delete'] }}"
+        },
+        {
+          "variables": {
+            "owned_id": "{{ states('input_text.techo5_example_alarm_id') }}"
+          }
+        },
+        {
+          "condition": "template",
+          "value_template": "{{ owned_id not in ['', 'unknown', 'unavailable'] and owned_id|length <= 80 }}"
+        },
+        {
+          "action": "esphome.echo_dot_example_alarms_list",
+          "response_variable": "listing"
+        },
+        {
+          "variables": {
+            "ours": "{{ listing.alarms|default([])|selectattr('id','equalto',owned_id)|selectattr('label','match','^techo5_example: ')|rejectattr('reminder')|list }}"
+          }
+        },
+        {
+          "condition": "template",
+          "value_template": "{{ ours|length == 1 }}"
+        },
+        {
+          "choose": [
+            {
+              "conditions": "{{ operation == 'enable' }}",
+              "sequence": [
+                {
+                  "action": "esphome.echo_dot_example_alarm_turn_on_id",
+                  "data": {
+                    "id": "{{ owned_id }}"
+                  }
+                }
+              ]
+            },
+            {
+              "conditions": "{{ operation == 'disable' }}",
+              "sequence": [
+                {
+                  "action": "esphome.echo_dot_example_alarm_turn_off_id",
+                  "data": {
+                    "id": "{{ owned_id }}"
+                  }
+                }
+              ]
+            },
+            {
+              "conditions": "{{ operation == 'delete' }}",
+              "sequence": [
+                {
+                  "action": "esphome.echo_dot_example_alarm_delete_id",
+                  "data": {
+                    "id": "{{ owned_id }}"
+                  }
+                },
+                {
+                  "action": "input_text.set_value",
+                  "data": {
+                    "value": ""
+                  },
+                  "target": {
+                    "entity_id": "input_text.techo5_example_alarm_id"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "fields": {
+        "operation": {
+          "required": true,
+          "selector": {
+            "select": {
+              "options": [
+                "enable",
+                "disable",
+                "delete"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "techo5_example_apply_room_volume": {
+      "alias": "TECHO5 example: apply suggested room volume",
+      "mode": "single",
+      "max_exceeded": "silent",
+      "sequence": [
+        {
+          "condition": "state",
+          "entity_id": "input_boolean.techo5_example_enabled",
+          "state": "on"
+        },
+        {
+          "condition": "state",
+          "entity_id": "binary_sensor.techo5_example_ready",
+          "state": "on"
+        },
+        {
+          "condition": "template",
+          "value_template": "{{ is_state('switch.echo_dot_example_microphone_ambient_noise_sensor', 'on') and is_number(states('sensor.echo_dot_example_microphone_ambient_noise')) and -120 <= states('sensor.echo_dot_example_microphone_ambient_noise')|float <= 0 and 0 <= as_timestamp(now()) - as_timestamp(states['sensor.echo_dot_example_microphone_ambient_noise'].last_updated) <= 600 }}"
+        },
+        {
+          "condition": "template",
+          "value_template": "{{ is_number(states('sensor.techo5_example_suggested_volume')) and 10 <= states('sensor.techo5_example_suggested_volume')|float <= 75 }}"
+        },
+        {
+          "action": "media_player.volume_set",
+          "data": {
+            "volume_level": "{{ states('sensor.techo5_example_suggested_volume')|float / 100 }}"
+          },
+          "target": {
+            "entity_id": "media_player.echo_dot_example_speaker"
+          }
+        }
+      ],
+      "description": "A manual persistent volume change, never automatic gain chasing and never a microphone-gain change."
+    },
+    "techo5_example_announce": {
+      "alias": "TECHO5 example: speak short panel announcement",
+      "mode": "single",
+      "max_exceeded": "silent",
+      "sequence": [
+        {
+          "condition": "state",
+          "entity_id": "input_boolean.techo5_example_enabled",
+          "state": "on"
+        },
+        {
+          "condition": "state",
+          "entity_id": "binary_sensor.techo5_example_ready",
+          "state": "on"
+        },
+        {
+          "variables": {
+            "message": "{{ states('input_text.techo5_example_announcement')|trim }}"
+          }
+        },
+        {
+          "condition": "template",
+          "value_template": "{{ message not in ['', 'unknown', 'unavailable'] and message|length <= 60 }}"
+        },
+        {
+          "action": "esphome.echo_dot_example_notify",
+          "data": {
+            "message": "{{ message }}",
+            "title": "",
+            "icon": "",
+            "chime": "",
+            "speak": "on",
+            "tag": "techo5_example_panel",
+            "seconds": 0
+          }
+        }
+      ],
+      "description": "Explicit short TTS announcement on this Dot. At most 60 Unicode code points, at most 240 UTF-8 bytes. Does not start recording."
+    },
+    "techo5_example_toggle_lights": {
+      "alias": "TECHO5 example: toggle assigned lights",
+      "mode": "single",
+      "max_exceeded": "silent",
+      "sequence": [
+        {
+          "condition": "state",
+          "entity_id": "input_boolean.techo5_example_enabled",
+          "state": "on"
+        },
+        {
+          "condition": "state",
+          "entity_id": "binary_sensor.techo5_example_ready",
+          "state": "on"
+        },
+        {
+          "condition": "template",
+          "value_template": "{{ states('light.example_kitchen_strip') in ['on','off'] and states('light.example_kitchen_table') in ['on','off'] }}"
+        },
+        {
+          "choose": [
+            {
+              "conditions": "{{ is_state('light.example_kitchen_strip','on') or is_state('light.example_kitchen_table','on') }}",
+              "sequence": [
+                {
+                  "action": "light.turn_off",
+                  "target": {
+                    "entity_id": [
+                      "light.example_kitchen_strip",
+                      "light.example_kitchen_table"
+                    ]
+                  }
+                }
+              ]
+            }
+          ],
+          "default": [
+            {
+              "action": "light.turn_on",
+              "target": {
+                "entity_id": [
+                  "light.example_kitchen_strip",
+                  "light.example_kitchen_table"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "delay": "00:00:03"
+        }
+      ],
+      "description": "Only the two explicitly assigned light entities; any currently lit means both off. Three-second debounce. No outlets or heaters."
+    },
+    "techo5_example_reminder_set": {
+      "alias": "TECHO5 example: set local spoken reminder",
+      "mode": "single",
+      "max_exceeded": "silent",
+      "sequence": [
+        {
+          "condition": "state",
+          "entity_id": "input_boolean.techo5_example_enabled",
+          "state": "on"
+        },
+        {
+          "condition": "state",
+          "entity_id": "binary_sensor.techo5_example_connected",
+          "state": "on"
+        },
+        {
+          "variables": {
+            "at": "{{ states('input_datetime.techo5_example_alarm_time')[:5] }}",
+            "days": "{{ states('input_select.techo5_example_alarm_repeat') }}",
+            "words": "{{ states('input_text.techo5_example_alarm_label')|trim }}"
+          }
+        },
+        {
+          "condition": "template",
+          "value_template": "{{ at|regex_match('^([01][0-9]|2[0-3]):[0-5][0-9]$') and days in ['once','daily','weekdays','weekends'] and words not in ['', 'unknown', 'unavailable'] and words|length <= 40 }}"
+        },
+        {
+          "action": "esphome.echo_dot_example_reminder_set",
+          "response_variable": "created",
+          "data": {
+            "time": "{{ at }}",
+            "days": "{{ days }}",
+            "label": "{{ words }}",
+            "ring_on": ""
+          }
+        },
+        {
+          "condition": "template",
+          "value_template": "{{ created is mapping and created.id is defined and created.id is string and created.id not in ['', 'all'] and created.id|length <= 80 }}"
+        },
+        {
+          "action": "esphome.echo_dot_example_alarms_list",
+          "response_variable": "listing"
+        },
+        {
+          "variables": {
+            "ours": "{{ listing.alarms|default([])|selectattr('id','equalto',created.id)|selectattr('reminder','equalto',true)|selectattr('label','equalto',words)|list }}"
+          }
+        },
+        {
+          "condition": "template",
+          "value_template": "{{ ours|length == 1 }}"
+        },
+        {
+          "action": "input_text.set_value",
+          "target": {
+            "entity_id": "input_text.techo5_example_reminder_id"
+          },
+          "data": {
+            "value": "{{ created.id }}"
+          }
+        },
+        {
+          "action": "input_text.set_value",
+          "target": {
+            "entity_id": "input_text.techo5_example_reminder_owned_label"
+          },
+          "data": {
+            "value": "{{ words }}"
+          }
+        }
+      ],
+      "description": "Creates a native spoken reminder on this Dot only, using the alarm time/repeat/text inputs. Its separate returned ID and original words are checked before subsequent control."
+    },
+    "techo5_example_reminder_control": {
+      "alias": "TECHO5 example: control panel reminder",
+      "mode": "single",
+      "max_exceeded": "silent",
+      "sequence": [
+        {
+          "condition": "state",
+          "entity_id": "input_boolean.techo5_example_enabled",
+          "state": "on"
+        },
+        {
+          "condition": "state",
+          "entity_id": "binary_sensor.techo5_example_connected",
+          "state": "on"
+        },
+        {
+          "condition": "template",
+          "value_template": "{{ operation in ['enable','disable','delete'] }}"
+        },
+        {
+          "variables": {
+            "owned_id": "{{ states('input_text.techo5_example_reminder_id') }}",
+            "owned_words": "{{ states('input_text.techo5_example_reminder_owned_label') }}"
+          }
+        },
+        {
+          "condition": "template",
+          "value_template": "{{ owned_id not in ['', 'all', 'unknown', 'unavailable'] and owned_id|length <= 80 and owned_words not in ['', 'unknown', 'unavailable'] }}"
+        },
+        {
+          "action": "esphome.echo_dot_example_alarms_list",
+          "response_variable": "listing"
+        },
+        {
+          "variables": {
+            "ours": "{{ listing.alarms|default([])|selectattr('id','equalto',owned_id)|selectattr('reminder','equalto',true)|selectattr('label','equalto',owned_words)|list }}"
+          }
+        },
+        {
+          "condition": "template",
+          "value_template": "{{ ours|length == 1 }}"
+        },
+        {
+          "choose": [
+            {
+              "conditions": "{{ operation == 'enable' }}",
+              "sequence": [
+                {
+                  "action": "esphome.echo_dot_example_alarm_turn_on_id",
+                  "data": {
+                    "id": "{{ owned_id }}"
+                  }
+                }
+              ]
+            },
+            {
+              "conditions": "{{ operation == 'disable' }}",
+              "sequence": [
+                {
+                  "action": "esphome.echo_dot_example_alarm_turn_off_id",
+                  "data": {
+                    "id": "{{ owned_id }}"
+                  }
+                }
+              ]
+            },
+            {
+              "conditions": "{{ operation == 'delete' }}",
+              "sequence": [
+                {
+                  "action": "esphome.echo_dot_example_alarm_delete_id",
+                  "data": {
+                    "id": "{{ owned_id }}"
+                  }
+                },
+                {
+                  "action": "input_text.set_value",
+                  "target": {
+                    "entity_id": "input_text.techo5_example_reminder_id"
+                  },
+                  "data": {
+                    "value": ""
+                  }
+                },
+                {
+                  "action": "input_text.set_value",
+                  "target": {
+                    "entity_id": "input_text.techo5_example_reminder_owned_label"
+                  },
+                  "data": {
+                    "value": ""
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "fields": {
+        "operation": {
+          "required": true,
+          "selector": {
+            "select": {
+              "options": [
+                "enable",
+                "disable",
+                "delete"
+              ]
+            }
+          }
+        }
+      },
+      "description": "Controls only the remembered reminder ID if the native listing still identifies it as a reminder with the original words. Never cancels other alarms or reminders."
+    },
+    "techo5_example_call_peer": {
+      "alias": "TECHO5 example: call the other Dot",
+      "mode": "single",
+      "max_exceeded": "silent",
+      "description": "Explicit call to one fixed private-PBX peer. Configure the example extension before using. Does not support arbitrary or external dialing.",
+      "sequence": [
+        {
+          "condition": "state",
+          "entity_id": "input_boolean.techo5_example_enabled",
+          "state": "on"
+        },
+        {
+          "condition": "state",
+          "entity_id": "binary_sensor.techo5_example_ready",
+          "state": "on"
+        },
+        {
+          "condition": "state",
+          "entity_id": "sensor.echo_dot_example_phone",
+          "state": "Ready"
+        },
+        {
+          "action": "esphome.echo_dot_example_phone_call_named",
+          "data": {
+            "number": "201",
+            "name": "Other Dot"
+          }
+        }
+      ]
+    }
+  },
+  "automation": [
+    {
+      "id": "techo5_example_double_clap",
+      "alias": "TECHO5 example: opt-in double clap lights",
+      "mode": "single",
+      "max_exceeded": "silent",
+      "triggers": [
+        {
+          "trigger": "event",
+          "event_type": "esphome.techo5_gesture",
+          "event_data": {
+            "gesture": "double_clap",
+            "device": "Echo Dot Example"
+          }
+        }
+      ],
+      "conditions": [
+        {
+          "condition": "state",
+          "entity_id": "input_boolean.techo5_example_enabled",
+          "state": "on"
+        },
+        {
+          "condition": "state",
+          "entity_id": "binary_sensor.techo5_example_ready",
+          "state": "on"
+        },
+        {
+          "condition": "state",
+          "entity_id": "input_boolean.techo5_example_clap_light",
+          "state": "on"
+        }
+      ],
+      "actions": [
+        {
+          "action": "script.techo5_example_toggle_lights"
+        }
+      ]
+    },
+    {
+      "id": "techo5_example_action_hold",
+      "alias": "TECHO5 example: opt-in Action hold energy ring",
+      "mode": "single",
+      "max_exceeded": "silent",
+      "triggers": [
+        {
+          "trigger": "state",
+          "entity_id": "event.echo_dot_example_action_button"
+        }
+      ],
+      "conditions": [
+        {
+          "condition": "state",
+          "entity_id": "input_boolean.techo5_example_enabled",
+          "state": "on"
+        },
+        {
+          "condition": "state",
+          "entity_id": "binary_sensor.techo5_example_ready",
+          "state": "on"
+        },
+        {
+          "condition": "state",
+          "entity_id": "input_boolean.techo5_example_button_energy",
+          "state": "on"
+        },
+        {
+          "condition": "template",
+          "value_template": "{{ trigger.from_state is not none and trigger.to_state is not none and trigger.from_state.state not in ['unknown','unavailable'] and trigger.to_state.state not in ['unknown','unavailable'] and trigger.to_state.attributes.get('event_type') == 'hold' and trigger.to_state.state != trigger.from_state.state }}"
+        }
+      ],
+      "actions": [
+        {
+          "delay": "00:00:01"
+        },
+        {
+          "condition": "state",
+          "entity_id": "binary_sensor.techo5_example_ready",
+          "state": "on"
+        },
+        {
+          "action": "script.techo5_example_ring_scene",
+          "data": {
+            "look": "Energy",
+            "duration": 8
+          }
+        }
+      ]
+    },
+    {
+      "id": "techo5_example_energy_pulse",
+      "alias": "TECHO5 example: optional periodic energy ring",
+      "mode": "single",
+      "max_exceeded": "silent",
+      "triggers": [
+        {
+          "trigger": "time_pattern",
+          "minutes": "/5"
+        }
+      ],
+      "conditions": [
+        {
+          "condition": "state",
+          "entity_id": "input_boolean.techo5_example_enabled",
+          "state": "on"
+        },
+        {
+          "condition": "state",
+          "entity_id": "binary_sensor.techo5_example_ready",
+          "state": "on"
+        },
+        {
+          "condition": "state",
+          "entity_id": "input_boolean.techo5_example_energy_pulse",
+          "state": "on"
+        }
+      ],
+      "actions": [
+        {
+          "action": "script.techo5_example_ring_scene",
+          "data": {
+            "look": "Energy",
+            "duration": 5
+          }
+        }
+      ]
+    },
+    {
+      "id": "techo5_example_availability_notice",
+      "alias": "TECHO5 example: debounced availability notice",
+      "mode": "single",
+      "triggers": [
+        {
+          "trigger": "state",
+          "entity_id": "binary_sensor.techo5_example_connected",
+          "to": "off",
+          "for": "00:05:00"
+        },
+        {
+          "trigger": "state",
+          "entity_id": "input_boolean.techo5_example_health_alerts",
+          "to": "on",
+          "for": "00:05:00"
+        },
+        {
+          "trigger": "state",
+          "entity_id": "input_boolean.techo5_example_enabled",
+          "to": "on",
+          "for": "00:05:00"
+        }
+      ],
+      "conditions": [
+        {
+          "condition": "state",
+          "entity_id": "input_boolean.techo5_example_enabled",
+          "state": "on"
+        },
+        {
+          "condition": "state",
+          "entity_id": "input_boolean.techo5_example_health_alerts",
+          "state": "on"
+        },
+        {
+          "condition": "state",
+          "entity_id": "binary_sensor.techo5_example_connected",
+          "state": "off"
+        },
+        {
+          "condition": "template",
+          "value_template": "{{ as_timestamp(now()) - as_timestamp(states['binary_sensor.techo5_example_connected'].last_changed) >= 300 }}"
+        }
+      ],
+      "actions": [
+        {
+          "action": "persistent_notification.create",
+          "data": {
+            "notification_id": "techo5_example_unavailable",
+            "title": "TECHO5 example is unavailable",
+            "message": "The Dot has been unavailable for at least five minutes. Check its power supply, cable and Wi-Fi. This package will not reboot it or change credentials."
+          }
+        }
+      ]
+    },
+    {
+      "id": "techo5_example_availability_recovered",
+      "alias": "TECHO5 example: clear recovered availability notice",
+      "mode": "single",
+      "triggers": [
+        {
+          "trigger": "state",
+          "entity_id": "binary_sensor.techo5_example_connected",
+          "to": "on",
+          "for": "00:00:30"
+        }
+      ],
+      "actions": [
+        {
+          "action": "persistent_notification.dismiss",
+          "data": {
+            "notification_id": "techo5_example_unavailable"
+          }
+        }
+      ]
+    }
+  ]
+}

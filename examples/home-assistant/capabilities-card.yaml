@@ -1,0 +1,549 @@
+{
+  "type": "vertical-stack",
+  "cards": [
+    {
+      "type": "entities",
+      "title": "TECHO5 additional controls",
+      "show_header_toggle": false,
+      "entities": [
+        "input_boolean.techo5_example_enabled",
+        "binary_sensor.techo5_example_connected",
+        "binary_sensor.techo5_example_ready",
+        "sensor.techo5_example_media_profile"
+      ]
+    },
+    {
+      "type": "grid",
+      "columns": 2,
+      "square": false,
+      "cards": [
+        {
+          "type": "button",
+          "name": "Wi-Fi + BLE",
+          "tap_action": {
+            "action": "perform-action",
+            "perform_action": "script.techo5_example_media_profile",
+            "data": {
+              "profile": "Wi-Fi + BLE"
+            }
+          },
+          "hold_action": {
+            "action": "none"
+          }
+        },
+        {
+          "type": "button",
+          "name": "Bluetooth speaker",
+          "tap_action": {
+            "action": "perform-action",
+            "perform_action": "script.techo5_example_media_profile",
+            "data": {
+              "profile": "Bluetooth speaker"
+            },
+            "confirmation": {
+              "text": "Bluetooth speaker on this Dot?"
+            }
+          },
+          "hold_action": {
+            "action": "none"
+          }
+        }
+      ]
+    },
+    {
+      "type": "entities",
+      "title": "Receivers and sensors",
+      "show_header_toggle": false,
+      "entities": [
+        "switch.echo_dot_example_airplay",
+        "switch.echo_dot_example_airplay_sets_the_volume",
+        "switch.echo_dot_example_dlna",
+        "switch.echo_dot_example_bluetooth_proxy",
+        "switch.echo_dot_example_microphone_ambient_noise_sensor",
+        "sensor.echo_dot_example_microphone_ambient_noise",
+        "sensor.echo_dot_example_lux"
+      ]
+    },
+    {
+      "type": "entities",
+      "title": "Ring and optional mappings",
+      "show_header_toggle": false,
+      "entities": [
+        "input_select.techo5_example_energy_source",
+        "input_boolean.techo5_example_energy_pulse",
+        "input_boolean.techo5_example_button_energy",
+        "input_boolean.techo5_example_clap_light",
+        "input_boolean.techo5_example_health_alerts"
+      ]
+    },
+    {
+      "type": "grid",
+      "columns": 2,
+      "square": false,
+      "cards": [
+        {
+          "type": "button",
+          "name": "Energy for 8 seconds",
+          "tap_action": {
+            "action": "perform-action",
+            "perform_action": "script.techo5_example_ring_scene",
+            "data": {
+              "look": "Energy",
+              "duration": 8
+            }
+          },
+          "hold_action": {
+            "action": "none"
+          }
+        },
+        {
+          "type": "button",
+          "name": "Night light for 30 seconds",
+          "tap_action": {
+            "action": "perform-action",
+            "perform_action": "script.techo5_example_ring_scene",
+            "data": {
+              "look": "Night light",
+              "duration": 30
+            }
+          },
+          "hold_action": {
+            "action": "none"
+          }
+        },
+        {
+          "type": "button",
+          "name": "Information ring",
+          "tap_action": {
+            "action": "perform-action",
+            "perform_action": "script.techo5_example_ring_scene",
+            "data": {
+              "look": "Information",
+              "duration": 8
+            }
+          },
+          "hold_action": {
+            "action": "none"
+          }
+        },
+        {
+          "type": "button",
+          "name": "Completed ring",
+          "tap_action": {
+            "action": "perform-action",
+            "perform_action": "script.techo5_example_ring_scene",
+            "data": {
+              "look": "Complete",
+              "duration": 8
+            }
+          },
+          "hold_action": {
+            "action": "none"
+          }
+        },
+        {
+          "type": "button",
+          "name": "Clear manual ring",
+          "tap_action": {
+            "action": "perform-action",
+            "perform_action": "script.techo5_example_ring_off"
+          },
+          "hold_action": {
+            "action": "none"
+          }
+        }
+      ]
+    },
+    {
+      "type": "entities",
+      "title": "Device-owned timer",
+      "show_header_toggle": false,
+      "entities": [
+        "input_number.techo5_example_timer_minutes",
+        "input_text.techo5_example_timer_label",
+        "sensor.echo_dot_example_timers"
+      ]
+    },
+    {
+      "type": "grid",
+      "columns": 2,
+      "square": false,
+      "cards": [
+        {
+          "type": "button",
+          "name": "Start local timer",
+          "tap_action": {
+            "action": "perform-action",
+            "perform_action": "script.techo5_example_timer_start"
+          },
+          "hold_action": {
+            "action": "none"
+          }
+        },
+        {
+          "type": "button",
+          "name": "Pause panel timer",
+          "tap_action": {
+            "action": "perform-action",
+            "perform_action": "script.techo5_example_timer_control",
+            "data": {
+              "operation": "pause"
+            }
+          },
+          "hold_action": {
+            "action": "none"
+          }
+        },
+        {
+          "type": "button",
+          "name": "Resume panel timer",
+          "tap_action": {
+            "action": "perform-action",
+            "perform_action": "script.techo5_example_timer_control",
+            "data": {
+              "operation": "resume"
+            }
+          },
+          "hold_action": {
+            "action": "none"
+          }
+        },
+        {
+          "type": "button",
+          "name": "Add five minutes",
+          "tap_action": {
+            "action": "perform-action",
+            "perform_action": "script.techo5_example_timer_control",
+            "data": {
+              "operation": "add five minutes"
+            }
+          },
+          "hold_action": {
+            "action": "none"
+          }
+        },
+        {
+          "type": "button",
+          "name": "Cancel panel timer",
+          "tap_action": {
+            "action": "perform-action",
+            "perform_action": "script.techo5_example_timer_control",
+            "data": {
+              "operation": "cancel"
+            }
+          },
+          "hold_action": {
+            "action": "none"
+          }
+        },
+        {
+          "type": "button",
+          "name": "Stop ringing alarm or timer",
+          "tap_action": {
+            "action": "perform-action",
+            "perform_action": "button.press",
+            "data": {
+              "entity_id": "button.echo_dot_example_stop_alarm_or_timer"
+            }
+          },
+          "hold_action": {
+            "action": "none"
+          }
+        }
+      ]
+    },
+    {
+      "type": "entities",
+      "title": "Device-owned alarm or reminder",
+      "show_header_toggle": false,
+      "entities": [
+        "input_datetime.techo5_example_alarm_time",
+        "input_select.techo5_example_alarm_repeat",
+        "input_select.techo5_example_alarm_mode",
+        "input_text.techo5_example_alarm_label",
+        "sensor.echo_dot_example_next_alarm"
+      ]
+    },
+    {
+      "type": "grid",
+      "columns": 2,
+      "square": false,
+      "cards": [
+        {
+          "type": "button",
+          "name": "Arm alarm or reminder",
+          "tap_action": {
+            "action": "perform-action",
+            "perform_action": "script.techo5_example_alarm_set",
+            "confirmation": {
+              "text": "Arm the selected alarm or spoken reminder on this Dot?"
+            }
+          },
+          "hold_action": {
+            "action": "none"
+          }
+        },
+        {
+          "type": "button",
+          "name": "Disable panel alarm",
+          "tap_action": {
+            "action": "perform-action",
+            "perform_action": "script.techo5_example_alarm_control",
+            "data": {
+              "operation": "disable"
+            }
+          },
+          "hold_action": {
+            "action": "none"
+          }
+        },
+        {
+          "type": "button",
+          "name": "Enable panel alarm",
+          "tap_action": {
+            "action": "perform-action",
+            "perform_action": "script.techo5_example_alarm_control",
+            "data": {
+              "operation": "enable"
+            },
+            "confirmation": {
+              "text": "Enable panel alarm on this Dot?"
+            }
+          },
+          "hold_action": {
+            "action": "none"
+          }
+        },
+        {
+          "type": "button",
+          "name": "Delete panel alarm",
+          "tap_action": {
+            "action": "perform-action",
+            "perform_action": "script.techo5_example_alarm_control",
+            "data": {
+              "operation": "delete"
+            },
+            "confirmation": {
+              "text": "Delete panel alarm on this Dot?"
+            }
+          },
+          "hold_action": {
+            "action": "none"
+          }
+        }
+      ]
+    },
+    {
+      "type": "entities",
+      "title": "Last reminder created by this panel",
+      "show_header_toggle": false,
+      "entities": [
+        {
+          "entity": "input_text.techo5_example_reminder_owned_label",
+          "name": "Original reminder words",
+          "type": "simple-entity"
+        }
+      ]
+    },
+    {
+      "type": "grid",
+      "columns": 2,
+      "square": false,
+      "cards": [
+        {
+          "type": "button",
+          "name": "Disable panel reminder",
+          "tap_action": {
+            "action": "perform-action",
+            "perform_action": "script.techo5_example_reminder_control",
+            "data": {
+              "operation": "disable"
+            }
+          },
+          "hold_action": {
+            "action": "none"
+          }
+        },
+        {
+          "type": "button",
+          "name": "Enable panel reminder",
+          "tap_action": {
+            "action": "perform-action",
+            "perform_action": "script.techo5_example_reminder_control",
+            "data": {
+              "operation": "enable"
+            },
+            "confirmation": {
+              "text": "Enable panel reminder on this Dot?"
+            }
+          },
+          "hold_action": {
+            "action": "none"
+          }
+        },
+        {
+          "type": "button",
+          "name": "Delete panel reminder",
+          "tap_action": {
+            "action": "perform-action",
+            "perform_action": "script.techo5_example_reminder_control",
+            "data": {
+              "operation": "delete"
+            },
+            "confirmation": {
+              "text": "Delete panel reminder on this Dot?"
+            }
+          },
+          "hold_action": {
+            "action": "none"
+          }
+        }
+      ]
+    },
+    {
+      "type": "entities",
+      "title": "Explicit voice and volume actions",
+      "show_header_toggle": false,
+      "entities": [
+        "input_number.techo5_example_volume_cap",
+        "sensor.techo5_example_suggested_volume",
+        "input_text.techo5_example_announcement"
+      ]
+    },
+    {
+      "type": "grid",
+      "columns": 2,
+      "square": false,
+      "cards": [
+        {
+          "type": "button",
+          "name": "Apply suggested volume",
+          "tap_action": {
+            "action": "perform-action",
+            "perform_action": "script.techo5_example_apply_room_volume"
+          },
+          "hold_action": {
+            "action": "none"
+          }
+        },
+        {
+          "type": "button",
+          "name": "Speak announcement",
+          "tap_action": {
+            "action": "perform-action",
+            "perform_action": "script.techo5_example_announce"
+          },
+          "hold_action": {
+            "action": "none"
+          }
+        }
+      ]
+    },
+    {
+      "type": "history-graph",
+      "title": "Room light and noise (6 hours)",
+      "hours_to_show": 6,
+      "entities": [
+        "sensor.echo_dot_example_lux",
+        "sensor.echo_dot_example_microphone_ambient_noise"
+      ]
+    },
+    {
+      "type": "history-graph",
+      "title": "Wi-Fi and available memory (6 hours)",
+      "hours_to_show": 6,
+      "entities": [
+        "sensor.echo_dot_example_wifi_signal",
+        "sensor.echo_dot_example_memory_available"
+      ]
+    },
+    {
+      "type": "entities",
+      "title": "TECHO5 diagnostics",
+      "show_header_toggle": false,
+      "entities": [
+        {
+          "entity": "sensor.echo_dot_example_last_boot",
+          "name": "Last boot"
+        },
+        {
+          "entity": "sensor.echo_dot_example_free_space",
+          "name": "Free storage"
+        },
+        {
+          "entity": "update.echo_dot_example_firmware",
+          "name": "Firmware"
+        },
+        {
+          "entity": "sensor.echo_dot_example_phone",
+          "name": "Phone"
+        },
+        {
+          "entity": "sensor.echo_dot_example_playback_sendspin_state",
+          "name": "Sendspin"
+        }
+      ]
+    },
+    {
+      "type": "entities",
+      "title": "Private intercom through the existing PBX",
+      "show_header_toggle": false,
+      "entities": [
+        "sensor.echo_dot_example_phone",
+        "sensor.echo_dot_example_phone_call"
+      ]
+    },
+    {
+      "type": "grid",
+      "columns": 3,
+      "square": false,
+      "cards": [
+        {
+          "type": "button",
+          "name": "Call other Dot",
+          "icon": "mdi:phone-outgoing",
+          "tap_action": {
+            "action": "perform-action",
+            "perform_action": "script.techo5_example_call_peer",
+            "confirmation": {
+              "text": "Place an audio call to the other Dot now?"
+            }
+          },
+          "hold_action": {
+            "action": "none"
+          }
+        },
+        {
+          "type": "button",
+          "name": "Answer",
+          "icon": "mdi:phone-incoming",
+          "tap_action": {
+            "action": "perform-action",
+            "perform_action": "button.press",
+            "data": {
+              "entity_id": "button.echo_dot_example_answer_call"
+            }
+          },
+          "hold_action": {
+            "action": "none"
+          }
+        },
+        {
+          "type": "button",
+          "name": "Hang up",
+          "icon": "mdi:phone-hangup",
+          "tap_action": {
+            "action": "perform-action",
+            "perform_action": "button.press",
+            "data": {
+              "entity_id": "button.echo_dot_example_hang_up"
+            }
+          },
+          "hold_action": {
+            "action": "none"
+          }
+        }
+      ]
+    }
+  ]
+}

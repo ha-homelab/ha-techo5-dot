@@ -53,3 +53,9 @@ checks described in the [wake-word guide](docs/wake-word.md).
 Repository creation and shared CI policy are described in [repository governance](docs/repository-governance.md).
 
 Read the [capability audit and extension plan](docs/capabilities.md), with a native action catalog and a read-only maintenance card.
+
+The [additional HA controls](docs/capability-package.md) include ring scenes,
+timers, alarms, reminders, announcements, receiver profiles and diagnostics.
+See [access and media setup](docs/capability-access.md) and the dated
+[implementation record](docs/capability-deployment.md) for verified results
+and remaining physical checks.
