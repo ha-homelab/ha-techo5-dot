@@ -1,8 +1,20 @@
 # Firmware updates
 
+## October 28, 2026: both Dots updated to v1.0.39
+
+The user requested the two updates offered in Home Assistant. Audiocenter / Dot 001 moved from **v1.0.38 to v1.0.39**, followed by Dot 002 from **v1.0.36 to v1.0.39**, using each native `update.install` action. The second request was sent only after the first unit reconnected, passed configuration and Bluetooth checks, and remained available beyond two minutes after boot. Both updates finished with an `installed` outcome, the expected installed version, no update pending and no update in progress.
+
+The [official release](https://github.com/HuskerMinion/techo5-dot/releases/tag/dot-v1.0.39) adds optional AirPlay volume control and Home Assistant actions to enable or disable alarms without deleting them. AirPlay volume control is off by default; this maintenance did not opt into new features or automatic future updates. The release manifest signature was verified with the previously pinned upstream public key before installation. Its SHA-256 is `b80aadeb663b3f4f789c054deb95a93be103108a3e28b06edb4116d3eaff4133`. Device installation used the existing signed OTA mechanism; no additional firmware archive or full-device backup was retained.
+
+Before/after comparisons covered **111 existing configuration entities on Dot 001 and 111 on Dot 002, with zero changed values**. The personal «Привет, Мышка» selection, threshold 0.5, disabled secondary wake word, both Local Russian Home selectors, streamed primary replies, wake tone, microphone settings, BLE proxy and Sendspin were preserved. SSH, the remote API and wake-clip capture remain off. Newly added controls were not changed.
+
+After both automatic reboots, the native satellites and players were idle, both Music Assistant players were available and both Sendspin clients were joined. Per-scanner HA diagnostic timestamps advanced for both physical Bluetooth proxies. This establishes fresh forwarding during the check, rather than relying only on a registered scanner or the shared advertisement feed.
+
+No spoken command, recording, music playback or home-control action was triggered. Direct boot-slot metadata, deployed binary/model hashes and acoustic behavior were not independently rechecked during this OTA maintenance. Private receipts retain the signed manifest, requested/offered versions, update progress, reboot timestamps, settings comparisons and scanner observations.
+
 ## October 26, 2026: v1.0.34 to v1.0.35
 
-The active Dot 2 was updated using its native Home Assistant firmware entity. The initial installation remains documented against v1.0.34 in [upstream-lock.json](../upstream-lock.json); that lock also identifies the original classifier-parity baseline. The current deployed platform release is [dot-v1.0.35](https://github.com/HuskerMinion/techo5-dot/releases/tag/dot-v1.0.35), commit [`b026039c75777197fdb901b8b1a1c55a8c7ed80c`](https://github.com/HuskerMinion/techo5-dot/tree/b026039c75777197fdb901b8b1a1c55a8c7ed80c).
+The active Dot 2 was updated using its native Home Assistant firmware entity. The initial installation remains documented against v1.0.34 in [upstream-lock.json](../upstream-lock.json); that lock also identifies the original classifier-parity baseline. The deployed platform release at that checkpoint was [dot-v1.0.35](https://github.com/HuskerMinion/techo5-dot/releases/tag/dot-v1.0.35), commit [`b026039c75777197fdb901b8b1a1c55a8c7ed80c`](https://github.com/HuskerMinion/techo5-dot/tree/b026039c75777197fdb901b8b1a1c55a8c7ed80c).
 
 ### Changes relevant to this Dot
 

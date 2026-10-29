@@ -1,12 +1,16 @@
 # Pilot status
 
+## October 28, 2026 — both Dots updated to v1.0.39
+
+Both Dots now run **TECHO5 v1.0.39** following sequential signed OTA updates requested in Home Assistant. Existing configuration values were preserved, both units reconnected after their automatic reboots, and both Bluetooth proxies forwarded fresh observations. The native voice and Music Assistant players are available. No acoustic test was performed. See the [update record](updates.md) for verification and its limits.
+
 ## October 28, 2026 — both physical Dots migrated
 
-The remaining EchoMuse unit, **Dot 001 / Audiocenter**, now runs **TECHO5 v1.0.38 in slot a**. Dot 002 remains on **v1.0.36**; its firmware, native HA entry, pairing data and voice selections were preserved. The installer source was pinned to [`e369da6fb320c79d027acf25acfab7c4ab8c4cd9`](https://github.com/HuskerMinion/techo5-dot/tree/e369da6fb320c79d027acf25acfab7c4ab8c4cd9), and the release manifest signature and asset hashes were verified. This is a separate deployment record; the original v1.0.34 pilot lock remains historical.
+At this migration checkpoint, the remaining EchoMuse unit, **Dot 001 / Audiocenter**, was installed with **TECHO5 v1.0.38 in slot a**. Dot 002 remained on **v1.0.36**; its firmware, native HA entry, pairing data and voice selections were preserved. The installer source was pinned to [`e369da6fb320c79d027acf25acfab7c4ab8c4cd9`](https://github.com/HuskerMinion/techo5-dot/tree/e369da6fb320c79d027acf25acfab7c4ab8c4cd9), and the release manifest signature and asset hashes were verified. This is a separate deployment record; the original v1.0.34 pilot lock remains historical.
 
 The USB serial identity, existing TWRP and retained NS6574/7623 system were verified before installation. This unit also had the emOS cache-superblock damage described in the [recovery record](emOS-cache-recovery.md). Three surviving metadata copies agreed. Standard filesystem repair with a 48 KiB undo file was followed by a clean read-only check. No cache format or userdata wipe was performed.
 
-The per-device recovery archive is approximately **51.8 MB compressed**. All 14 saved image files independently matched their source sizes and SHA-256 hashes. The installer wrote and read back the generated boot image; its first boot was healthy. A subsequent normal software reboot also reached a healthy slot a, with the official daemon hash and personal-model hashes matching. Slot b is still empty on this newly installed unit; the initial migration is not protected by an older TECHO5 slot.
+The per-device recovery archive is approximately **51.8 MB compressed**. All 14 saved image files independently matched their source sizes and SHA-256 hashes. The installer wrote and read back the generated boot image; its first boot was healthy. A subsequent normal software reboot also reached a healthy slot a, with the official daemon hash and personal-model hashes matching. Slot b was empty immediately after this initial installation; at that stage, the migration was not protected by an older TECHO5 slot.
 
 The personal **«Привет, Мышка (personal)»** model remains the sole selected wake word at threshold **0.5**. Both Assist selectors use **Local Russian Home**, streamed replies and the wake tone are configured, and training/utterance capture remains off. Encrypted ESPHome pairing, the native player and the Music Assistant Sendspin player are available. SSH and the remote API remain off. These checks do not establish audible recognition or playback quality.
 

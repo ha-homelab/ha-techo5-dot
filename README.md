@@ -10,7 +10,7 @@ This repository records compatibility decisions, private preparation and accepta
 
 ## Where we are
 
-Both Dots now use TECHO5: **Dot 001 runs v1.0.38 in slot a; Dot 002 remains on v1.0.36**. The October 28 migration preserved the personal wake model, paired the remaining unit with encrypted ESPHome, updated its dashboard and music routes, and removed its obsolete EchoMuse registrations. A software reboot passed. Fresh Bluetooth reports were received from both physical Dots. End-to-end voice/music tests remain pending; see the dated [status](docs/status.md).
+Both Dots now run **TECHO5 v1.0.39 after the October 28 signed OTA update**. The October 28 migration preserved the personal wake model, paired the remaining unit with encrypted ESPHome, updated its dashboard and music routes, and removed its obsolete EchoMuse registrations. A software reboot passed. Fresh Bluetooth reports were received from both physical Dots. End-to-end voice/music tests remain pending; see the dated [status](docs/status.md).
 
 The personal TFLite model has loaded in the openWakeWord engine. Its unique selector label is **«Привет, Мышка (personal)»**; the spoken phrase remains **«Привет, Мышка»**. The verified threshold is **0.5**, with no second wake word. Both Assist pipeline selectors use **Local Russian Home**; BLE proxy and streamed replies are enabled. These settings do not establish acoustic recognition, smooth playback or early audible replies.
 
