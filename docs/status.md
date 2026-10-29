@@ -1,8 +1,12 @@
 # Pilot status
 
+## October 29, 2026 — both Dots updated to v1.0.40
+
+Both Dots now run **TECHO5 v1.0.40** after sequential signed updates requested in Home Assistant. Existing settings remained unchanged; both native voice connections and Bluetooth proxies passed administrative checks. Music Assistant and Sendspin readback remained with the separate HA maintenance window. Quiet-speech improvements reported upstream have not been acoustically tested here. See the [update record](updates.md).
+
 ## October 28, 2026 — both Dots updated to v1.0.39
 
-Both Dots now run **TECHO5 v1.0.39** following sequential signed OTA updates requested in Home Assistant. Existing configuration values were preserved, both units reconnected after their automatic reboots, and both Bluetooth proxies forwarded fresh observations. The native voice and Music Assistant players are available. No acoustic test was performed. See the [update record](updates.md) for verification and its limits.
+At this checkpoint, both Dots ran **TECHO5 v1.0.39** following sequential signed OTA updates requested in Home Assistant. Existing configuration values were preserved, both units reconnected after their automatic reboots, and both Bluetooth proxies forwarded fresh observations. The native voice and Music Assistant players are available. No acoustic test was performed. See the [update record](updates.md) for verification and its limits.
 
 ## October 28, 2026 — both physical Dots migrated
 
