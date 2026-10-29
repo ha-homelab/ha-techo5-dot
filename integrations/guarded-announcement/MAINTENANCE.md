@@ -92,3 +92,7 @@ These tests simulate rollback paths in a temporary directory and verify that a
 running process is never killed, foreign holds and unexpected binaries survive,
 bad backups are rejected, and absent idle entities fail closed. They do not
 certify a device's network, power supply or acoustic output.
+
+Daemon uploads use gzip on the SSH stream to reduce transfer time on slow Wi-Fi.
+The device verifies the expanded daemon against the same explicit SHA-256 before
+any active-file replacement; a failed upload leaves the running daemon intact.

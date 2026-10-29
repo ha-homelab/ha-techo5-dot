@@ -1,5 +1,19 @@
 # Pilot status
 
+## October 29, 2026 — music-ducking beta installed
+
+Both Dots run **v1.0.40-myshka.1.beta.1** and return the new `duck_music`
+capability through **echomuse_home 0.4.0b2**. The exact running/on-disk hashes
+and watchdog acknowledgements passed on each device. Announcements can now mix
+with supported local music using the configured attenuation; default `skip`
+behavior remains unchanged. The second Dot's temporary SSH access is off again.
+The Audiocenter Sendspin check completed over continuing music, preserved master
+volume and deduplicated a retry. The listener confirmed the announcement and
+attenuation. Mixing on the second Dot has not been checked acoustically.
+
+See the [beta record](guarded-announcement-ducking.md) for the complete contract,
+software checks, installation scope, artifacts and acceptance limits.
+
 ## October 29, 2026 — guarded-announcement alpha installed
 
 Both Dots run **v1.0.40-myshka.1.alpha.1**, a downstream daemon built from the exact

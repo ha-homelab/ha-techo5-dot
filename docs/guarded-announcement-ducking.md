@@ -64,6 +64,41 @@ The repository's standard tests, seven maintenance tests, public-data audit,
 documentation checks and ARMv7 compilation also passed. Shared CI repeats the
 native tests and compilation for the versioned patch.
 
+## Installed pilot — October 29, 2026
+
+Both Dots completed the controlled daemon replacement and normal watchdog
+acknowledgement. Each running process and on-disk daemon matched the beta hash
+below, and the HA adapter returned all five base flags plus `duck_music: true`.
+Existing pairing, wake models and SIP account files were not rewritten by the
+installer. Temporary SSH on the second Dot was switched off again.
+
+HA 0.4.0b2 is active after one coordinated restart. Its four changed files match
+the published source; the pilot's existing household init, intent and policy
+files remain byte-identical. The service schema exposes both `skip` and
+`duck_music`.
+
+The first uncompressed upload hit the 90-second transfer limit before any
+active-file replacement. Its partial staging file was removed after confirming
+the alpha daemon still matched its hash. The successful installs used compressed
+SSH transfer with the same expanded-file SHA-256 checks. No guard or watchdog
+was bypassed.
+
+## Audiocenter acoustic acceptance
+
+The operator-authorized check used the first Dot's existing Music Assistant
+queue through Sendspin. Native and Music Assistant playback were both observed
+before submission. The legacy policy returned `skipped / audio_busy`; the
+explicit duck request progressed to `completed` while that same music queue
+continued. A duplicate returned the original completion without another
+announcement. Master volume remained **23/30** throughout. After the test, only
+that unchanged test queue was stopped, leaving both players idle.
+
+The listener confirmed hearing the announcement and the music attenuation in
+response to the mixing/restoration check. This confirms this short Audiocenter
+scenario. It does not establish prolonged-stream reliability, all output
+protocols, or acoustic acceptance of mixing on the second Dot. The second Dot
+has passed installation, running-hash and capability checks.
+
 ## Reproducible artifacts
 
 - Daemon SHA256:
@@ -71,7 +106,7 @@ native tests and compilation for the versioned patch.
 - Source patch SHA256:
   `26b15d4db822b7b379774ba120eea3bb8a0edc0386b500e3a52313d6d4a6947d`
 - Native release archive SHA256:
-  `f553e1744a64921f4083ff12e10956b75329e8d267467e41ffb3e1245b66e270`
+  `f5c9b6bb4a34e807a7d3fe03bf8147a27f71ffdee0a7ea03e8b9b8e2ce937f07`
 - HA 0.4.0b2 ZIP SHA256:
   `cb70a42d677c014d8fae76f491ab68c377ead67e5bd54f2c9f78f97fd8045896`
 

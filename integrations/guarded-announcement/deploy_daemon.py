@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import gzip
 import http.client
 import ipaddress
 import json
@@ -182,7 +183,14 @@ def main():
     script = Path(__file__).with_name("maintenance.sh").read_bytes()
     for name, data in (("params", params.encode()), ("maintenance.sh", script),
                        ("echod.next", args.binary.read_bytes())):
-        ssh(args, "umask 077; /bin/busybox.static cat > " + shlex.quote(job + "/" + name), data)
+        # Stage the daemon compressed over slow Wi-Fi. The receiver still hashes
+        # the expanded bytes against the explicit release digest before install.
+        if name == "echod.next":
+            data = gzip.compress(data, compresslevel=1, mtime=0)
+            command = "umask 077; /bin/busybox.static gunzip -c > "
+        else:
+            command = "umask 077; /bin/busybox.static cat > "
+        ssh(args, command + shlex.quote(job + "/" + name), data)
     ha.stable_idle(expected)
     print(json.dumps({"job": job_id, "status": "starting", "rollback_after_seconds": 180}), flush=True)
     invoke(args, job, "apply")

@@ -15,7 +15,7 @@ This repository records compatibility decisions, private preparation and accepta
 
 ## Where we are
 
-Both Dots now run the experimental **v1.0.40-myshka.1.alpha.1 daemon**, built from the exact upstream v1.0.40 source and the guarded-announcement overlay. Both installations passed running/on-disk hash verification and Home Assistant capability checks. This was a controlled daemon replacement, not a signed OTA update. See the [validation record](docs/guarded-announcement-validation.md) for artifact hashes and limits.
+Both Dots now run the experimental **v1.0.40-myshka.1.beta.1 daemon**, built from the exact upstream v1.0.40 source and the guarded-announcement overlay. Both installations passed running/on-disk hash verification and Home Assistant capability checks. This was a controlled daemon replacement, not a signed OTA update. Both support explicit announcements over ducked local music. See the [beta validation record](docs/guarded-announcement-ducking.md) for artifact hashes and limits.
 
 The October 28 migration preserved the personal wake model, paired the remaining unit with encrypted ESPHome, updated its dashboard and music routes, and removed its obsolete EchoMuse registrations. End-to-end voice/music tests remain separate; see the dated [status](docs/status.md).
 
