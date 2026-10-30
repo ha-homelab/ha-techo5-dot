@@ -28,6 +28,7 @@ The author’s report of three Dot 2 units in daily use informed our initial sin
 2. Review [the custom wake word](docs/wake-word.md); the source ONNX model requires conversion to OWW TFLite and is not a drop-in microWakeWord model.
 3. Review [Home Assistant integration](docs/home-assistant.md).
 4. Complete [acceptance checks](docs/acceptance.md) for each deployed unit.
+5. For PBX calls, use the [native SIP phone guide](docs/phone.md) and its separate call acceptance checks.
 
 Read [SECURITY.md](SECURITY.md) before handling private material and [THIRD_PARTY.md](THIRD_PARTY.md) for upstream attribution. This is an independent homelab project, not an Amazon or TECHO5 endorsement.
 

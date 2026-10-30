@@ -1,0 +1,6 @@
+{
+  "device_prefix": "echo_dot_example",
+  "server": "pbx.example.net",
+  "username": "REPLACE_WITH_PBX_USERNAME",
+  "password": "REPLACE_WITH_PBX_PASSWORD"
+}

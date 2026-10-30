@@ -13,3 +13,5 @@ Vorbereitung und Cache-Reparatur sind separat dokumentiert. Alte vollständige A
 Ausführliche Anleitungen sind derzeit auf Englisch: [Status](docs/status.md), [Migration](docs/migration.md), [Wake Word](docs/wake-word.md), [Home Assistant](docs/home-assistant.md), [Abnahme](docs/acceptance.md).
 
 [Update auf v1.0.35 über HA](docs/updates.md).
+
+[SIP-Telefon an der eigenen Telefonanlage](docs/phone.md): Einrichtung und separate Anrufprüfung (Englisch).
