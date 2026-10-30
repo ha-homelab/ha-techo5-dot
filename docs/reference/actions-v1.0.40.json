@@ -1,0 +1,731 @@
+{
+  "firmware": "TECHO5 v1.0.40",
+  "hardware": "Echo Dot 2 (biscuit)",
+  "observed_date": "2026-10-29",
+  "domain": "esphome",
+  "device_prefix": "echo_dot_example",
+  "notes": [
+    "Schema presence is not proof that a screen-dependent function works on a Dot.",
+    "All live identifiers and configuration values are omitted.",
+    "These are definitions, not executable calls. Check the installed device schema before use."
+  ],
+  "services": {
+    "echo_dot_example_alarm_delete": {
+      "fields": {
+        "time": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        },
+        "label": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        }
+      }
+    },
+    "echo_dot_example_alarm_delete_id": {
+      "fields": {
+        "id": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        }
+      }
+    },
+    "echo_dot_example_alarm_set": {
+      "fields": {
+        "time": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        },
+        "days": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        },
+        "label": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        }
+      }
+    },
+    "echo_dot_example_alarm_set_light_only": {
+      "fields": {
+        "time": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        },
+        "days": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        },
+        "label": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        }
+      }
+    },
+    "echo_dot_example_alarm_set_silent": {
+      "fields": {
+        "time": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        },
+        "days": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        },
+        "label": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        }
+      }
+    },
+    "echo_dot_example_alarm_snooze_for": {
+      "fields": {
+        "sentence": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        }
+      },
+      "response": {
+        "optional": true
+      }
+    },
+    "echo_dot_example_alarm_turn_off": {
+      "fields": {
+        "time": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        },
+        "label": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        }
+      }
+    },
+    "echo_dot_example_alarm_turn_off_id": {
+      "fields": {
+        "id": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        }
+      }
+    },
+    "echo_dot_example_alarm_turn_on": {
+      "fields": {
+        "time": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        },
+        "label": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        }
+      }
+    },
+    "echo_dot_example_alarm_turn_on_id": {
+      "fields": {
+        "id": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        }
+      }
+    },
+    "echo_dot_example_alarms_follow": {
+      "fields": {
+        "entities": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        }
+      }
+    },
+    "echo_dot_example_alarms_list": {
+      "fields": {},
+      "response": {
+        "optional": true
+      }
+    },
+    "echo_dot_example_announce_house": {
+      "fields": {
+        "text": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        }
+      }
+    },
+    "echo_dot_example_copy_settings": {
+      "fields": {
+        "settings": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        },
+        "devices": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        }
+      }
+    },
+    "echo_dot_example_home_assistant": {
+      "fields": {
+        "url": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        },
+        "token": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        }
+      }
+    },
+    "echo_dot_example_home_cameras": {
+      "fields": {
+        "cameras": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        }
+      }
+    },
+    "echo_dot_example_home_go2rtc": {
+      "fields": {
+        "address": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        }
+      },
+      "response": {
+        "optional": true
+      }
+    },
+    "echo_dot_example_home_radio": {
+      "fields": {
+        "stations": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        },
+        "now": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        },
+        "service": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        },
+        "field": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        },
+        "speaker_field": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        },
+        "speaker": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        }
+      }
+    },
+    "echo_dot_example_home_show_camera": {
+      "fields": {
+        "entity": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        },
+        "seconds": {
+          "required": true,
+          "selector": {
+            "number": {
+              "mode": "box"
+            }
+          }
+        }
+      }
+    },
+    "echo_dot_example_home_show_camera_sound": {
+      "fields": {
+        "entity": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        },
+        "seconds": {
+          "required": true,
+          "selector": {
+            "number": {
+              "mode": "box"
+            }
+          }
+        },
+        "sound": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        }
+      }
+    },
+    "echo_dot_example_home_weather": {
+      "fields": {
+        "entity": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        }
+      }
+    },
+    "echo_dot_example_intercom_call": {
+      "fields": {
+        "device": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        }
+      }
+    },
+    "echo_dot_example_leave_home_assistant": {
+      "fields": {
+        "confirm": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        }
+      }
+    },
+    "echo_dot_example_notify": {
+      "fields": {
+        "message": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        },
+        "title": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        },
+        "icon": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        },
+        "chime": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        },
+        "speak": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        },
+        "tag": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        },
+        "seconds": {
+          "required": true,
+          "selector": {
+            "number": {
+              "mode": "box"
+            }
+          }
+        }
+      }
+    },
+    "echo_dot_example_notify_picture": {
+      "fields": {
+        "message": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        },
+        "title": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        },
+        "picture": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        },
+        "chime": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        },
+        "speak": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        },
+        "sound": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        },
+        "tag": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        },
+        "seconds": {
+          "required": true,
+          "selector": {
+            "number": {
+              "mode": "box"
+            }
+          }
+        }
+      }
+    },
+    "echo_dot_example_phone_account": {
+      "fields": {
+        "server": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        },
+        "username": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        },
+        "password": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        }
+      }
+    },
+    "echo_dot_example_phone_answer": {
+      "fields": {}
+    },
+    "echo_dot_example_phone_call": {
+      "fields": {
+        "number": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        }
+      }
+    },
+    "echo_dot_example_phone_call_named": {
+      "fields": {
+        "number": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        },
+        "name": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        }
+      }
+    },
+    "echo_dot_example_phone_contacts": {
+      "fields": {
+        "contacts": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        }
+      }
+    },
+    "echo_dot_example_phone_hangup": {
+      "fields": {}
+    },
+    "echo_dot_example_recordings": {
+      "fields": {},
+      "response": {
+        "optional": true
+      }
+    },
+    "echo_dot_example_reminder_set": {
+      "fields": {
+        "time": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        },
+        "days": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        },
+        "label": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        },
+        "ring_on": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        }
+      },
+      "response": {
+        "optional": true
+      }
+    },
+    "echo_dot_example_ssh_keys": {
+      "fields": {
+        "keys": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        }
+      }
+    },
+    "echo_dot_example_timer_add": {
+      "fields": {
+        "id": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        },
+        "duration": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        }
+      }
+    },
+    "echo_dot_example_timer_cancel": {
+      "fields": {
+        "id": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        }
+      }
+    },
+    "echo_dot_example_timer_pause": {
+      "fields": {
+        "id": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        }
+      }
+    },
+    "echo_dot_example_timer_remove": {
+      "fields": {
+        "id": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        },
+        "duration": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        }
+      }
+    },
+    "echo_dot_example_timer_resume": {
+      "fields": {
+        "id": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        }
+      }
+    },
+    "echo_dot_example_timer_start": {
+      "fields": {
+        "duration": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        },
+        "label": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        }
+      },
+      "response": {
+        "optional": true
+      }
+    },
+    "echo_dot_example_turn_audio": {
+      "fields": {
+        "id": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        },
+        "page": {
+          "required": true,
+          "selector": {
+            "number": {
+              "mode": "box"
+            }
+          }
+        }
+      },
+      "response": {
+        "optional": true
+      }
+    },
+    "echo_dot_example_voice_effect": {
+      "fields": {
+        "effect": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        }
+      }
+    },
+    "echo_dot_example_wake_clip_audio": {
+      "fields": {
+        "id": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        },
+        "page": {
+          "required": true,
+          "selector": {
+            "number": {
+              "mode": "box"
+            }
+          }
+        }
+      },
+      "response": {
+        "optional": true
+      }
+    },
+    "echo_dot_example_wake_clips": {
+      "fields": {
+        "kind": {
+          "required": true,
+          "selector": {
+            "text": null
+          }
+        },
+        "page": {
+          "required": true,
+          "selector": {
+            "number": {
+              "mode": "box"
+            }
+          }
+        }
+      },
+      "response": {
+        "optional": true
+      }
+    }
+  }
+}

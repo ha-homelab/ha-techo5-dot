@@ -14,4 +14,9 @@ Guides détaillés, actuellement en anglais : [état](docs/status.md), [migratio
 
 [Mise à jour vers v1.0.35 via HA](docs/updates.md).
 
+Consultez [l’audit des fonctions et le plan d’extension](docs/capabilities.md), avec catalogue des actions et carte de diagnostic (en anglais).
+[Fonctions HA supplémentaires](docs/capability-package.md) : anneau lumineux,
+minuteurs, alarmes, rappels, annonces et diagnostic. [Accès et médias](docs/capability-access.md)
+et [rapport de déploiement](docs/capability-deployment.md), en anglais.
+
 [Téléphone SIP avec votre propre PBX](docs/phone.md) : configuration et vérification distincte des appels (en anglais).

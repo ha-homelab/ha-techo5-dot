@@ -14,4 +14,9 @@ Ausführliche Anleitungen sind derzeit auf Englisch: [Status](docs/status.md), [
 
 [Update auf v1.0.35 über HA](docs/updates.md).
 
+Siehe [Funktionsübersicht und Erweiterungsplan](docs/capabilities.md) mit Aktionskatalog und Diagnosekarte (auf Englisch).
+[Zusätzliche HA-Funktionen](docs/capability-package.md): Lichtring, Timer,
+Wecker, Erinnerungen, Ansagen und Diagnose. [Zugriff und Medien](docs/capability-access.md)
+und [Bereitstellungsbericht](docs/capability-deployment.md) sind auf Englisch.
+
 [SIP-Telefon an der eigenen Telefonanlage](docs/phone.md): Einrichtung und separate Anrufprüfung (Englisch).
