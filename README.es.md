@@ -4,7 +4,7 @@
 
 [English](README.md) · [Русский](README.ru.md) · [Deutsch](README.de.md) · [Español](README.es.md) · [Français](README.fr.md)
 
-**Ambos Dot ejecutan v1.0.39 tras la actualización OTA firmada del 28 de octubre.** La migración del 28 de octubre conservó el modelo personal, configuró la conexión cifrada, actualizó el panel y las rutas de música y eliminó los registros antiguos de EchoMuse. Se verificó un reinicio por software. Ambos proxies Bluetooth entregan anuncios nuevos. Las pruebas de voz y música siguen siendo una etapa separada. Véase el [estado](docs/status.md).
+**Ambos Dot ejecutan v1.0.40 tras la actualización OTA firmada del 29 de octubre.** La migración del 28 de octubre conservó el modelo personal, configuró la conexión cifrada, actualizó el panel y las rutas de música y eliminó los registros antiguos de EchoMuse. Se verificó un reinicio por software. Ambos proxies Bluetooth entregan anuncios nuevos. Las pruebas de voz y música siguen siendo una etapa separada. Véase el [estado](docs/status.md).
 
 El modelo personal se convirtió de ONNX a OWW TFLite y se cargó en openWakeWord. Su nombre único en los ajustes es **«Привет, Мышка (personal)»**; la frase hablada sigue siendo **«Привет, Мышка»**. El umbral verificado es **0.5**, sin una segunda palabra de activación. Ambos selectores de Assist usan **Local Russian Home**; el proxy BLE y las respuestas en streaming están activados. Aún hay que evaluar distancia, falsas activaciones, latencia y música.
 
@@ -18,3 +18,5 @@ Consulta la [auditoría de funciones y el plan de ampliación](docs/capabilities
 [Funciones adicionales de HA](docs/capability-package.md): anillo, temporizadores,
 alarmas, recordatorios, anuncios y diagnóstico. [Acceso y medios](docs/capability-access.md)
 e [informe de implementación](docs/capability-deployment.md), en inglés.
+
+[Teléfono SIP con una centralita propia](docs/phone.md): configuración y comprobación separada de llamadas (en inglés).

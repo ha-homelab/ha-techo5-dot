@@ -1,8 +1,54 @@
 # Pilot status
 
+## October 29, 2026 — native SIP pilot and call controls
+
+One available Dot on **TECHO5 v1.0.40** was provisioned with its own local PBX
+account through the verified native HA action. The PBX owner explicitly selected
+the firmware's optional UDP/RTP mode for this LAN pilot. That switch was the only
+intentional device-setting change; the account helper compared all **112**
+existing select/switch/number/text states before and after provisioning and found
+no further changes. The PBX confirmed the expected account registration. A repeat
+preflight returned `already_verified` without resubmitting the account.
+
+A bounded outgoing echo test reached an answered **G.711 mu-law** channel. The
+PBX observed 333 received and 333 transmitted RTP packets, with no reported loss
+in that short sample. Native HA Hang up closed the channel. A separate incoming
+test reached `Ringing`, was answered through the native HA action, reached `Up`,
+and returned to idle after the PBX ended its short Wait application. This
+incoming control test did not send far-end audio. No test channels remained,
+and the original wake, microphone and Sendspin settings were preserved.
+
+A separate PBX audio-service initially failed because its caller allowlist did
+not include the new endpoint. After the PBX owner fixed and deployed that list,
+one bounded repeat logged playback of the prepared audio file, the successful
+`DIALAUDIOSTATUS=ok` dialplan branch and normal PBX hangup. The Dot returned to
+Ready with no test channel left and unchanged settings. The short playback ended
+between RTP samples: the first sample showed 96 received packets before outbound
+playback, and no channel remained for the second. This repeat therefore confirms
+the playback/control path, not complete bidirectional packet counts or audible
+quality. No further test calls were made before handing the quiet window back
+to the PBX owner.
+
+Both existing media cards now include native Phone, Phone call, Answer call and
+Hang up rows, and the old controller heading was replaced with TECHO5. No custom
+integration, persistent auto-answer or wake-during-calls setting was enabled.
+The other Dot's native service remains unavailable and its matching USB console
+was not found; its SIP account has not been provisioned. Recovery still requires
+device access. The outage predates the separately coordinated HA Core update.
+
+The public helper passed **28 focused tests**, and **40 repository tests** passed
+in total. Documentation and public-data checks passed. Physical-button operation,
+audible intelligibility, echo/double-talk quality, music resumption and network-loss
+recovery were not tested here. See the [phone guide](phone.md) for the source
+boundary, idempotence limitations and remaining acceptance work.
+
+## October 29, 2026 — both Dots updated to v1.0.40
+
+Both Dots now run **TECHO5 v1.0.40** after sequential signed updates requested in Home Assistant. Existing settings remained unchanged; both native voice connections and Bluetooth proxies passed administrative checks. Music Assistant and Sendspin readback remained with the separate HA maintenance window. Quiet-speech improvements reported upstream have not been acoustically tested here. See the [update record](updates.md).
+
 ## October 28, 2026 — both Dots updated to v1.0.39
 
-Both Dots now run **TECHO5 v1.0.39** following sequential signed OTA updates requested in Home Assistant. Existing configuration values were preserved, both units reconnected after their automatic reboots, and both Bluetooth proxies forwarded fresh observations. The native voice and Music Assistant players are available. No acoustic test was performed. See the [update record](updates.md) for verification and its limits.
+At this checkpoint, both Dots ran **TECHO5 v1.0.39** following sequential signed OTA updates requested in Home Assistant. Existing configuration values were preserved, both units reconnected after their automatic reboots, and both Bluetooth proxies forwarded fresh observations. The native voice and Music Assistant players are available. No acoustic test was performed. See the [update record](updates.md) for verification and its limits.
 
 ## October 28, 2026 — both physical Dots migrated
 

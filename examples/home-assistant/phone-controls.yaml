@@ -1,0 +1,22 @@
+# Lovelace card: paste into a dashboard's Manual card editor.
+# This is not a configuration.yaml package or an automation.
+#
+# Replace all four example entity IDs with the existing ESPHome entities from
+# the intended Dot's Home Assistant device page. Renamed entities can have
+# different IDs; use the entities named Phone, Phone call, Answer call and
+# Hang up. Each card controls one Dot.
+#
+# The native button rows act only when pressed. No call is placed or answered
+# automatically, and the card does not change wake-word or music settings.
+type: entities
+title: Echo Dot — Phone
+show_header_toggle: false
+entities:
+  - entity: sensor.echo_dot_example_phone
+    name: Phone status
+  - entity: sensor.echo_dot_example_phone_call
+    name: Other party
+  - entity: button.echo_dot_example_answer_call
+    name: Answer call
+  - entity: button.echo_dot_example_hang_up
+    name: Hang up / decline

@@ -4,7 +4,7 @@
 
 [English](README.md) · [Русский](README.ru.md) · [Deutsch](README.de.md) · [Español](README.es.md) · [Français](README.fr.md)
 
-**Beide Dots laufen nach dem signierten OTA-Update vom 28. Oktober mit v1.0.39.** Bei der Migration am 28. Oktober wurden das persönliche Aktivierungsmodell erhalten, die verschlüsselte Verbindung eingerichtet, Dashboard und Musikzuordnung aktualisiert und alte EchoMuse-Einträge entfernt. Ein Software-Neustart wurde geprüft. Beide Bluetooth-Proxys liefern neue Meldungen. Sprach- und Musikhörtests sind ein eigener Prüfschritt. Siehe [Status](docs/status.md).
+**Beide Dots laufen nach dem signierten OTA-Update vom 29. Oktober mit v1.0.40.** Bei der Migration am 28. Oktober wurden das persönliche Aktivierungsmodell erhalten, die verschlüsselte Verbindung eingerichtet, Dashboard und Musikzuordnung aktualisiert und alte EchoMuse-Einträge entfernt. Ein Software-Neustart wurde geprüft. Beide Bluetooth-Proxys liefern neue Meldungen. Sprach- und Musikhörtests sind ein eigener Prüfschritt. Siehe [Status](docs/status.md).
 
 Das persönliche Modell wurde von ONNX nach OWW TFLite konvertiert und von openWakeWord geladen. Sein eindeutiger Einstellungsname lautet **«Привет, Мышка (personal)»**; gesprochen wird weiterhin **«Привет, Мышка»**. Bestätigt sind ein Schwellenwert von **0.5** und kein zweites Aktivierungswort. Beide Assist-Auswahlen verwenden **Local Russian Home**; BLE-Proxy und gestreamte Antworten sind aktiviert. Erkennung auf Entfernung, Fehlaktivierungen, Latenz und Musik müssen noch geprüft werden.
 
@@ -18,3 +18,5 @@ Siehe [Funktionsübersicht und Erweiterungsplan](docs/capabilities.md) mit Aktio
 [Zusätzliche HA-Funktionen](docs/capability-package.md): Lichtring, Timer,
 Wecker, Erinnerungen, Ansagen und Diagnose. [Zugriff und Medien](docs/capability-access.md)
 und [Bereitstellungsbericht](docs/capability-deployment.md) sind auf Englisch.
+
+[SIP-Telefon an der eigenen Telefonanlage](docs/phone.md): Einrichtung und separate Anrufprüfung (Englisch).

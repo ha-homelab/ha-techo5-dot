@@ -10,7 +10,7 @@ This repository records compatibility decisions, private preparation and accepta
 
 ## Where we are
 
-Both Dots now run **TECHO5 v1.0.39 after the October 28 signed OTA update**. The October 28 migration preserved the personal wake model, paired the remaining unit with encrypted ESPHome, updated its dashboard and music routes, and removed its obsolete EchoMuse registrations. A software reboot passed. Fresh Bluetooth reports were received from both physical Dots. End-to-end voice/music tests remain pending; see the dated [status](docs/status.md).
+Both Dots now run **TECHO5 v1.0.40 after the October 29 signed OTA update**. The October 28 migration preserved the personal wake model, paired the remaining unit with encrypted ESPHome, updated its dashboard and music routes, and removed its obsolete EchoMuse registrations. A software reboot passed. Fresh Bluetooth reports were received from both physical Dots. End-to-end voice/music tests remain pending; see the dated [status](docs/status.md).
 
 The personal TFLite model has loaded in the openWakeWord engine. Its unique selector label is **«Привет, Мышка (personal)»**; the spoken phrase remains **«Привет, Мышка»**. The verified threshold is **0.5**, with no second wake word. Both Assist pipeline selectors use **Local Russian Home**; BLE proxy and streamed replies are enabled. These settings do not establish acoustic recognition, smooth playback or early audible replies.
 
@@ -28,6 +28,7 @@ The author’s report of three Dot 2 units in daily use informed our initial sin
 2. Review [the custom wake word](docs/wake-word.md); the source ONNX model requires conversion to OWW TFLite and is not a drop-in microWakeWord model.
 3. Review [Home Assistant integration](docs/home-assistant.md).
 4. Complete [acceptance checks](docs/acceptance.md) for each deployed unit.
+5. For PBX calls, use the [native SIP phone guide](docs/phone.md) and its separate call acceptance checks.
 
 Read [SECURITY.md](SECURITY.md) before handling private material and [THIRD_PARTY.md](THIRD_PARTY.md) for upstream attribution. This is an independent homelab project, not an Amazon or TECHO5 endorsement.
 

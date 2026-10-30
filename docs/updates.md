@@ -1,5 +1,21 @@
 # Firmware updates
 
+If a Dot answers ping but its native HA entities remain unavailable after
+repeated boots, follow [rescue-mode diagnosis and recovery](rescue-recovery.md)
+before considering another firmware installation.
+
+## October 29, 2026: both Dots updated to v1.0.40
+
+Both native Home Assistant firmware entities offered **v1.0.40**. The updates were installed sequentially from **v1.0.39**, preserving the current personal wake-word and Assist configuration. The release manifest signature was verified before installation; manifest SHA-256: `fed13874c391baa844ac939d21251427b182a9f82042c276f202fa8de1962a0e`.
+
+The [upstream release](https://github.com/HuskerMinion/techo5-dot/releases/tag/dot-v1.0.40) reports a fix for pauses prematurely ending quietly spoken requests. This maintenance does not establish improved acoustic behavior; that needs a separate listening test. The release also renames the alarm actions that take an `id` to `alarm_turn_off_id` and `alarm_turn_on_id`. Check any automation using `alarm_turn_off` or `alarm_turn_on` with an `id` when upgrading. The pre-update scan of 93 deployed HA YAML/custom-sentence/dashboard files found no old alarm-action references; no automation changes were needed within that scope.
+
+Audiocenter initially encountered a GitHub TLS timeout and a download rate near 19.6 kB/s. The device's own recovery re-associated Wi-Fi, detected a two-minute transfer stall and resumed from byte 2,439,551. It then completed the download and entered slot installation. A read-only USB log check confirmed these phases and adequate free space. No manual reboot, parallel install or replacement download was used; low progress alone was not treated as installation failure.
+
+Both devices reconnected after their automatic reboot, reported the expected installed version and an `installed` outcome, and cleared their pending update. Existing settings comparisons covered **112 entities on Dot 001 and 112 on Dot 002, with no changed values**. The personal «Привет, Мышка» selection, threshold, primary streamed replies, both Local Russian Home selectors, microphone configuration, wake tone and access settings were preserved. Automatic future updates remain disabled.
+
+Both native satellites and players were available, and per-scanner Bluetooth observation timestamps advanced on both physical proxies. Music Assistant was being upgraded in a separate coordinated maintenance window: its players were temporarily unavailable and Sendspin was waiting. That external service readback was handed to the HA maintenance owner; music readiness is not claimed by this OTA record. Checks included more than two minutes since each new boot. No microphone capture, spoken request, music playback or household action was triggered. Boot-slot metadata and installed file hashes were not independently checked in this OTA run. Only small configuration/verification receipts and the signed manifest were retained privately; no full firmware or device backup was added.
+
 ## October 28, 2026: both Dots updated to v1.0.39
 
 The user requested the two updates offered in Home Assistant. Audiocenter / Dot 001 moved from **v1.0.38 to v1.0.39**, followed by Dot 002 from **v1.0.36 to v1.0.39**, using each native `update.install` action. The second request was sent only after the first unit reconnected, passed configuration and Bluetooth checks, and remained available beyond two minutes after boot. Both updates finished with an `installed` outcome, the expected installed version, no update pending and no update in progress.
