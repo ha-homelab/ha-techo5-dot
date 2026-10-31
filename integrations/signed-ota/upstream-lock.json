@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "release": "dot-v1.0.44",
+  "version": "v1.0.44",
+  "repository": "HuskerMinion/techo5-dot",
+  "platform_commit": "7f91b238b91956f9da64bbc7ec3c1501ea3e7fe4",
+  "daemon_commit": "b6a070fc6e62ec0e2636726619003e8c6505c4f8",
+  "manifest_sha256": "7dd94984eeecbcac504a2425978799d9c8fc26d07c22a92cb31964663115a1d8",
+  "upstream_public_key": "KVUuQUbhyKwPBbIneqFEvXYSI+3Hkfu/heCTy5YNVMk=",
+  "rootfs": {
+    "name": "techo5-dot-rootfs-v1.0.44.tar.gz",
+    "url": "https://github.com/HuskerMinion/techo5-dot/releases/download/dot-v1.0.44/techo5-dot-rootfs-v1.0.44.tar.gz",
+    "size": 35936181,
+    "sha256": "49bcc4f24826400cf12477633bffc2e74e17e61b8ee2cb9e7aeb239d437c658a"
+  },
+  "third_party_sources": {
+    "name": "techo5-third-party-sources.tar.gz",
+    "url": "https://github.com/HuskerMinion/techo5-dot/releases/download/dot-v1.0.44/techo5-third-party-sources.tar.gz",
+    "size": 92877745,
+    "sha256": "d24a7019321c7a0e28e45ab3ada98b2b271a61ebca0d5045ed0f5ac180ca4c5e"
+  }
+}

@@ -1,5 +1,7 @@
 # HA · TECHO5 Dot
 
+Signierte Firmware-Updates sind im [Myshka-OTA-Leitfaden](docs/signed-ota.md) beschrieben. Die neue Build-Reihe verwendet TECHO5 v1.0.44, einen eigenen Signaturschlüssel und Repository-Kanäle. Das persönliche Aktivierungsmodell und die Musikabsenkung bleiben erhalten.
+
 **Beide Echo Dot 2 laufen jetzt mit TECHO5 und sind direkt mit Home Assistant verbunden. Die technischen Prüfungen sind bestanden; Hörtests stehen noch aus.**
 
 [English](README.md) · [Русский](README.ru.md) · [Deutsch](README.de.md) · [Español](README.es.md) · [Français](README.fr.md)

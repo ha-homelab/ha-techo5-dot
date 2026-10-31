@@ -1,5 +1,7 @@
 # HA · TECHO5 Dot
 
+Las actualizaciones firmadas se describen en la [guía OTA de Myshka](docs/signed-ota.md). La nueva serie usa TECHO5 v1.0.44, una clave de firma propia y canales de este repositorio. Conserva el modelo personal de activación y la atenuación de música.
+
 **Los dos Echo Dot 2 ejecutan TECHO5 y se conectan directamente a Home Assistant. Las comprobaciones técnicas se han completado; quedan las pruebas de escucha.**
 
 [English](README.md) · [Русский](README.ru.md) · [Deutsch](README.de.md) · [Español](README.es.md) · [Français](README.fr.md)

@@ -1,5 +1,7 @@
 # HA · TECHO5 Dot
 
+Signed downstream firmware updates are described in the [Myshka OTA guide](docs/signed-ota.md). The new build line uses the pinned TECHO5 v1.0.44 system, a dedicated signing key and repository channels; it preserves the personal wake model and guarded music ducking.
+
 Experimental development: [guarded one-way announcements](integrations/guarded-announcement/README.md)
 defines request-owned audio delivery with busy refusal, expiry and deduplication.
 The [music-ducking beta](docs/guarded-announcement-ducking.md) adds explicit
