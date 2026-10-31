@@ -11,13 +11,13 @@ announcements over supported music; the original skip policy stays the default.
 
 [English](README.md) · [Русский](README.ru.md) · [Deutsch](README.de.md) · [Español](README.es.md) · [Français](README.fr.md)
 
-This repository records compatibility decisions, private preparation and acceptance checks. It does not replace upstream firmware or contain device credentials, recordings, model weights or unlocking tools.
+This repository maintains a signed downstream Dot 2 firmware distribution, deployment recipes and acceptance checks. Public releases contain verified system files and corresponding sources; device credentials, recordings, personal model weights and unlocking tools stay outside the repository.
 
 ![Previous EchoMuse connection and installed TECHO5 connection](docs/assets/architecture.svg)
 
 ## Where we are
 
-Both Dots now run the experimental **v1.0.40-myshka.1.beta.1 daemon**, built from the exact upstream v1.0.40 source and the guarded-announcement overlay. Both installations passed running/on-disk hash verification and Home Assistant capability checks. This was a controlled daemon replacement, not a signed OTA update. Both support explicit announcements over ducked local music. See the [beta validation record](docs/guarded-announcement-ducking.md) for artifact hashes and limits.
+Both Dots now run **v1.0.44-beta.202_myshka2**, installed through the native Home Assistant Firmware action from our signed **myshka-beta** channel. The full system uses the pinned upstream v1.0.44 base, including its AirPlay IPv6 fix, and retains guarded announcements, music ducking and the personal wake model. Automatic installation remains off. See the [OTA guide](docs/signed-ota.md), [release](https://github.com/ha-homelab/ha-techo5-dot/releases/tag/v1.0.44-beta.202_myshka2) and dated [acceptance record](docs/status.md).
 
 The October 28 migration preserved the personal wake model, paired the remaining unit with encrypted ESPHome, updated its dashboard and music routes, and removed its obsolete EchoMuse registrations. End-to-end voice/music tests remain separate; see the dated [status](docs/status.md).
 

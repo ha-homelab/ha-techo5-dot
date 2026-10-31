@@ -76,6 +76,14 @@ Later releases need only steps 4–6. The existing ESPHome integration owns the
 Firmware entity; no extra HACS updater or custom integration is necessary.
 Home Assistant and Music Assistant entity IDs remain unchanged.
 
+A renamed device can retain its original entity IDs while its native ESPHome
+action prefix changes. Use the entity-bound announcement adapter, or pass the
+current `--service-prefix` separately from `--prefix` to the maintenance helper.
+Verify that action in HA: the old prefix may remain active until integration
+reconnection, so the new friendly name alone is not sufficient evidence.
+A stale action can report “not connected” even while the entity is available;
+verify the current action name instead of treating that as a failed flash.
+
 ## What changes and what survives?
 
 The rootfs archive contains the upstream system with the downstream daemon,

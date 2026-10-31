@@ -6,7 +6,7 @@ Signierte Firmware-Updates sind im [Myshka-OTA-Leitfaden](docs/signed-ota.md) be
 
 [English](README.md) · [Русский](README.ru.md) · [Deutsch](README.de.md) · [Español](README.es.md) · [Français](README.fr.md)
 
-**Beide Dots verwenden die experimentelle Version v1.0.40-myshka.1.beta.1.** Ansagen über leiser laufender Musik sind mit `duck_music` verfügbar; `skip` bleibt der Standard. Installation und Hash-Prüfung wurden auf beiden Geräten abgeschlossen. Dies ist ein separater Daemon-Build, kein signiertes OTA-Update. Siehe [Prüfungen und Grenzen](docs/guarded-announcement-ducking.md).
+**Beide Dots verwenden v1.0.44-beta.202_myshka2**, über die Firmware-Aktion in Home Assistant aus unserem signierten Kanal **myshka-beta** installiert. Das vollständige System enthält die AirPlay-IPv6-Korrektur von TECHO5 v1.0.44 und behält das persönliche Aktivierungsmodell, Ansagen und Musikabsenkung bei. Die automatische Installation bleibt ausgeschaltet. Siehe [OTA und Wiederherstellung](docs/signed-ota.md) und [Prüfergebnisse](docs/status.md).
 
 Das persönliche Modell wurde von ONNX nach OWW TFLite konvertiert und von openWakeWord geladen. Sein eindeutiger Einstellungsname lautet **«Привет, Мышка (personal)»**; gesprochen wird weiterhin **«Привет, Мышка»**. Bestätigt sind ein Schwellenwert von **0.5** und kein zweites Aktivierungswort. Beide Assist-Auswahlen verwenden **Local Russian Home**; BLE-Proxy und gestreamte Antworten sind aktiviert. Erkennung auf Entfernung, Fehlaktivierungen, Latenz und Musik müssen noch geprüft werden.
 

@@ -26,3 +26,18 @@ local changes; this is not an official upstream release.
 The build helper fetches upstream source and dependencies without copying them
 into this repository. Their individual terms still apply to compiled artifacts;
 the upstream `NOTICE` describes inherited EchoLocal code and other components.
+
+## Signed Dot 2 distribution
+
+The signed OTA line derives the exact TECHO5 Dot v1.0.44 rootfs and applies the
+downstream daemon built from shared commit `b6a070fc6e62ec0e2636726619003e8c6505c4f8`.
+See the [locked inputs](integrations/signed-ota/upstream-lock.json) and
+[source collection instructions](integrations/signed-ota/README.md). Each release
+ships an authenticated corresponding-source archive: exact project/daemon/platform
+sources, upstream special media sources, Alpine recipes and original distfiles,
+custom bluealsa patches, imported Go modules and their license notices.
+
+These remain separate licensed components; this project's license does not
+relicense them. The source inventory records five historical Alpine APK metadata
+limitations explicitly. No kernel, OEM image, personal wake weights or device
+configuration is distributed in the rootfs.

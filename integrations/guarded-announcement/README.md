@@ -103,6 +103,13 @@ stock OTA image. The helper has no deployment command.
 The separate [maintenance helper](MAINTENANCE.md) provides a controlled manual
 replacement for an existing installation, with explicit binary hashes, idle
 checks and rollback. It does not flash a boot image or replace OTA signing keys.
+After a device rename, HA may retain the original entity IDs while native action
+names use the new device name. Keep `--prefix VERIFIED_ENTITY_PREFIX` for the
+idle checks and pass `--service-prefix VERIFIED_CURRENT_ACTION_PREFIX` for the
+capability acknowledgement. Verify the current action in HA; without this option
+the helper uses `--prefix` for both. The `echomuse_home.announcement_*` services
+bind through the target entity's current ESPHome connection and need no action
+prefix.
 
 ## Acceptance and release boundary
 

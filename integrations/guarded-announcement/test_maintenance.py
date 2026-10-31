@@ -1,11 +1,14 @@
 """Offline rollback regression tests. Never connects to a real device."""
 import hashlib
 import importlib.util
+import io
+from contextlib import redirect_stdout
 from pathlib import Path
 import subprocess
 import tempfile
 from types import SimpleNamespace
 import unittest
+from unittest.mock import Mock, patch
 
 HERE = Path(__file__).parent
 spec = importlib.util.spec_from_file_location("deploy_daemon", HERE / "deploy_daemon.py")
@@ -107,6 +110,53 @@ class IdleGuards(unittest.TestCase):
         ha.request = lambda _: []
         with self.assertRaises(ValueError):
             ha.stable_idle({"sensor.required": "idle"})
+
+
+class MaintenanceRouting(unittest.TestCase):
+    def arguments(self, service_prefix=None):
+        args = ["deploy_daemon.py", "ack", "--host", "192.0.2.1", "--identity", "/unused/key",
+                "--known-hosts", "/unused/hosts", "--old-sha256", "a" * 64,
+                "--new-sha256", "b" * 64, "--job", "c" * 32,
+                "--ha-url", "http://127.0.0.1:8123", "--ha-token-file", "/unused/token",
+                "--prefix", "original_dot"]
+        for name in ("general", "alarm", "timer"):
+            args.extend(["--idle-entity", f"binary_sensor.original_dot_{name}=off"])
+        if service_prefix is not None:
+            args.extend(["--service-prefix", service_prefix])
+        return args
+
+    def test_renamed_action_keeps_original_entity_guards(self):
+        for supplied, expected in ((None, "original_dot"), ("renamed_dot", "renamed_dot")):
+            with self.subTest(service_prefix=supplied):
+                ha = Mock()
+                ha.request.side_effect = lambda path, data: {"service_response": {
+                    "request_id": data["request_id"], "boot_id": "test-boot",
+                    "protocol": "cisco-announcement-v1", **dict.fromkeys(deploy.FLAGS, True)}}
+                with patch.object(deploy.sys, "argv", self.arguments(supplied)), \
+                     patch.object(deploy, "HA", return_value=ha), \
+                     patch.object(deploy, "read_token", return_value="unused-test-token"), \
+                     patch.object(deploy, "invoke") as invoke, redirect_stdout(io.StringIO()):
+                    deploy.main()
+                self.assertEqual(ha.request.call_count, 1)
+                self.assertEqual(ha.request.call_args.args[0],
+                                 f"/api/services/esphome/{expected}_guarded_announcement_capabilities?return_response")
+                self.assertEqual(ha.stable_idle.call_count, 2)
+                for call in ha.stable_idle.call_args_list:
+                    guards = call.args[0]
+                    self.assertEqual(guards["assist_satellite.original_dot_assist_satellite"], "idle")
+                    self.assertEqual(guards["sensor.original_dot_phone"], "Ready")
+                    self.assertTrue(all(".original_dot_" in entity for entity in guards))
+                self.assertEqual(invoke.call_args.args[2], "ack")
+
+    def test_invalid_service_prefix_is_refused_before_transport(self):
+        for supplied in ("", "renamed-dot", "../other", "dot?extra=1", "two dots"):
+            with self.subTest(service_prefix=supplied), \
+                 patch.object(deploy.sys, "argv", self.arguments(supplied)), \
+                 patch.object(deploy, "HA") as ha, patch.object(deploy, "read_token") as token:
+                with self.assertRaises(ValueError):
+                    deploy.main()
+                ha.assert_not_called()
+                token.assert_not_called()
 
 
 if __name__ == "__main__":

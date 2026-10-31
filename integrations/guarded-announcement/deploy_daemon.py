@@ -134,6 +134,7 @@ def main():
     parser.add_argument("--ha-url")
     parser.add_argument("--ha-token-file", type=Path)
     parser.add_argument("--prefix", help="verified ESPHome entity prefix")
+    parser.add_argument("--service-prefix", help="verified current ESPHome action prefix; defaults to --prefix")
     parser.add_argument("--idle-entity", action="append", default=[], metavar="ENTITY=STATE")
     parser.add_argument("--job", help="job ID from apply, required for status/ack")
     args = parser.parse_args()
@@ -156,6 +157,10 @@ def main():
     if not (args.ha_url and args.ha_token_file and args.prefix
             and re.fullmatch(r"[a-z0-9_]+", args.prefix)):
         raise ValueError("HA origin, private token file and verified entity prefix are required")
+    if args.service_prefix is None:
+        args.service_prefix = args.prefix
+    if not re.fullmatch(r"[a-z0-9_]+", args.service_prefix):
+        raise ValueError("The verified service prefix must contain only lowercase letters, digits and underscores")
     expected = expected_states(args)
     ha = HA(args.ha_url, read_token(args.ha_token_file))
     ha.stable_idle(expected)
@@ -164,7 +169,7 @@ def main():
         return
     if args.mode == "ack":
         request_id = "announce-" + uuid.uuid4().hex + "-000"
-        result = ha.request(f"/api/services/esphome/{args.prefix}_guarded_announcement_capabilities?return_response",
+        result = ha.request(f"/api/services/esphome/{args.service_prefix}_guarded_announcement_capabilities?return_response",
                             {"request_id": request_id})
         response = result.get("service_response", {})
         if (response.get("request_id") != request_id or not response.get("boot_id")

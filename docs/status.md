@@ -1,5 +1,62 @@
 # Pilot status
 
+
+## October 31, 2026 — signed Myshka OTA verified on both Dots
+
+Both Echo Dot 2 units now run **v1.0.44-beta.202_myshka2**, installed through
+Home Assistant's existing native **Firmware** action. The signed **myshka-beta**
+channel belongs to this repository. Both update entities are enabled again,
+report the installed version as current, link to our release, and no longer
+follow the original TECHO5 feed. Automatic installation remains disabled.
+The Media dashboard now exposes each unit's firmware, channel, status and
+automatic-install switch instead of the previous manual-maintenance notice.
+
+The full rootfs incorporates TECHO5 Dot v1.0.44, including the Mac AirPlay IPv6
+firewall correction. The unchanged guarded-announcement patch retains music
+ducking. The personal openWakeWord model and sidecar were not retrained or
+replaced. The upstream microWakeWord correction is a different engine; the
+new opt-in Record takes feature remains disabled.
+
+Deployment used a one-time **beta.201** daemon bridge with exact hash checks and
+watchdog acknowledgement, then the actual **beta.202** A/B update through HA.
+Both devices booted and committed **slot b**; the prior **slot a** stayed good.
+Each passed **39 post-install checks**, including running/on-disk daemon and
+system-file hashes, signed provenance, pairing/name/Wi-Fi/SIP/SSH/model file
+preservation, allowed updater-only configuration differences, HA availability,
+Sendspin joining, phone readiness and the guarded announcement capability
+contract. Production entity-bound announcement queries also returned all five
+base guarantees and `duck_music` on both devices. Temporary SSH access was
+restored to its previous disabled state on the second unit.
+
+One verification request exposed a naming distinction after device renaming:
+stable entity IDs retained their original prefix, while native ESPHome action
+names followed the current device name. A stale action reported “not connected”
+even though the device was available. The maintenance helper now accepts a
+separate verified `--service-prefix`. The existing entity-bound announcement
+adapter already follows the current client and required no changes. Only one
+scoped ESPHome entry reload was used; Home Assistant was not restarted.
+
+Two independently packaged releases were byte-identical. The published assets
+were downloaded and verified before channel promotion. Public source and
+private-data boundary checks pass; 75 repository tests, 25 signed-OTA tests,
+9 maintenance tests, native update race tests, Linux firmware tests and both
+ARM builds passed locally or in CI. No new audible voice/music or recording test
+was performed during this OTA run; previous acoustic acceptance is not a new
+measurement of v1.0.44.
+
+Release: [v1.0.44-beta.202_myshka2](https://github.com/ha-homelab/ha-techo5-dot/releases/tag/v1.0.44-beta.202_myshka2).
+Build and recovery details: [signed OTA guide](signed-ota.md).
+
+- Daemon SHA-256: `e1d132d3c9d4c23093b508e73bab66197d8a589db3aa5ff01a4b45b1a12eeeef`.
+- Rootfs: **36,004,196 bytes**, SHA-256 `42363b5e5565c66ac21e3bf3e7ac8c64fcea08685a9ca619cdff7d0240fec8b5`.
+- Manifest SHA-256: `93d9fe66febdf84ec2410276d6b3e6542971566987b6f743000eb6a6ec13a268`.
+- Signed metadata expires **April 29, 2027, 21:02:27 UTC**. Publish a fresh signed
+  release before then for continued updates; expiry does not stop normal use.
+
+The automatic slot-commit mechanism still tests PID stability, not complete HA
+functionality. The independent checks above establish this deployment's health;
+they do not turn the fallback mechanism into a guarantee against every failure.
+
 ## October 29, 2026 — music-ducking beta installed
 
 Both Dots run **v1.0.40-myshka.1.beta.1** and return the new `duck_music`
