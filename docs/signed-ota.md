@@ -45,8 +45,10 @@ changing only the suffix does not create a newer update. The older
 `-myshka.2.beta.N` scheme failed actual HA version-ordering tests and is not used.
 
 Channel metadata is valid for **180 days**. The client permits at most 366 days.
-Maintainers must sign and promote fresh metadata before expiry, even when the
-binary is unchanged. Expiry blocks updates, not normal voice/media operation.
+Before expiry, maintainers publish and promote a new signed release with a
+higher beta number, even when the upstream source has not changed. The current
+publisher keeps immutable release metadata unchanged; it is not a metadata-only
+renewal command. Expiry blocks updates, not normal voice/media operation.
 The signing seed is private; CI does not receive it and cannot sign releases.
 
 ## First migration and later updates

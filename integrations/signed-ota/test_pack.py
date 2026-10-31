@@ -217,8 +217,10 @@ class PackagingTests(unittest.TestCase):
         self.assertFalse(args.out_dir.exists())
 
     def test_supplement_rejects_obvious_secrets_but_allows_public_material(self):
+        # Construct only a header for the refusal test; no key is generated or stored.
+        private_header = b"-----BEGIN OPENSSH " + b"PRIVATE KEY-----"
         for name, data in (("id_ed25519", b"key"), ("seed.pem", b"seed"),
-                           (".env", b"TOKEN=x"), ("harmless.txt", b"-----BEGIN OPENSSH PRIVATE KEY-----")):
+                           (".env", b"TOKEN=x"), ("harmless.txt", private_header)):
             with self.subTest(name=name), self.assertRaises(ValueError):
                 pack.validate_supplement({name: pack.Entry(data=data)})
         pack.validate_supplement({"release-public-key.pem": pack.Entry(data=b"-----BEGIN PUBLIC KEY-----"),

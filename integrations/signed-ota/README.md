@@ -124,7 +124,9 @@ Publish complete immutable version assets before updating the separately signed
 bytes and refuse replacement of immutable assets. A channel's manifest/signature
 pair is not an atomic two-file operation; mismatched pairs temporarily fail
 signature verification instead of authorizing an unverified install. An expired
-feed must be deliberately renewed by the maintainer.
+feed must be deliberately renewed by publishing a new signed release with a
+higher version. The current publisher does not replace metadata inside an
+existing immutable release.
 
 ## Corresponding sources and license scope
 
