@@ -1,0 +1,3 @@
+# Unified diffs necessarily contain context-prefix spaces before Go tabs.
+# Validate whitespace in the applied upstream tree, not in diff serialization.
+integrations/guarded-announcement/*.patch -whitespace
