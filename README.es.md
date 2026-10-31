@@ -1,10 +1,12 @@
 # HA · TECHO5 Dot
 
+Las actualizaciones firmadas se describen en la [guía OTA de Myshka](docs/signed-ota.md). La nueva serie usa TECHO5 v1.0.44, una clave de firma propia y canales de este repositorio. Conserva el modelo personal de activación y la atenuación de música.
+
 **Los dos Echo Dot 2 ejecutan TECHO5 y se conectan directamente a Home Assistant. Las comprobaciones técnicas se han completado; quedan las pruebas de escucha.**
 
 [English](README.md) · [Русский](README.ru.md) · [Deutsch](README.de.md) · [Español](README.es.md) · [Français](README.fr.md)
 
-**Ambos Dot ejecutan v1.0.40 tras la actualización OTA firmada del 29 de octubre.** La migración del 28 de octubre conservó el modelo personal, configuró la conexión cifrada, actualizó el panel y las rutas de música y eliminó los registros antiguos de EchoMuse. Se verificó un reinicio por software. Ambos proxies Bluetooth entregan anuncios nuevos. Las pruebas de voz y música siguen siendo una etapa separada. Véase el [estado](docs/status.md).
+**Ambos Dot ejecutan v1.0.44-beta.202_myshka2**, instalada mediante Firmware en Home Assistant desde nuestro canal firmado **myshka-beta**. El sistema completo incorpora la corrección de AirPlay IPv6 de TECHO5 v1.0.44 y conserva el modelo personal de activación, los anuncios y la atenuación de música. La instalación automática sigue desactivada. Consulte [OTA y recuperación](docs/signed-ota.md) y los [resultados](docs/status.md).
 
 El modelo personal se convirtió de ONNX a OWW TFLite y se cargó en openWakeWord. Su nombre único en los ajustes es **«Привет, Мышка (personal)»**; la frase hablada sigue siendo **«Привет, Мышка»**. El umbral verificado es **0.5**, sin una segunda palabra de activación. Ambos selectores de Assist usan **Local Russian Home**; el proxy BLE y las respuestas en streaming están activados. Aún hay que evaluar distancia, falsas activaciones, latencia y música.
 

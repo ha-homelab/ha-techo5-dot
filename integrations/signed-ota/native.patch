@@ -1,0 +1,499 @@
+diff --git a/echod/internal/feature/firmware/firmware.go b/echod/internal/feature/firmware/firmware.go
+index ba0c010..3bebb94 100644
+--- a/echod/internal/feature/firmware/firmware.go
++++ b/echod/internal/feature/firmware/firmware.go
+@@ -333,17 +333,26 @@ func (u *Firmware) Install(ctx context.Context) {
+ 	u.busy.Add(1)
+ 	defer u.busy.Add(-1)
+ 
+-	found, err := update.Fetch(ctx, u.Channel())
++	channel := u.Channel()
++	found, err := update.Fetch(ctx, channel)
++	if err == nil && u.Channel() != channel {
++		err = errors.New("update channel changed during verification")
++	}
++	if err == nil {
++		err = found.ReadyForInstall(channel)
++	}
+ 	if err != nil {
+-		slog.Warn("re-reading the channel failed, using the last check", "err", err)
+-		u.mu.Lock()
+-		found = u.found
+-		u.mu.Unlock()
+-	} else {
++		// Cached or expired manifests are never a fallback for root installation.
++		slog.Error("verifying the current signed update failed", "err", err)
+ 		u.mu.Lock()
+-		u.found = found
++		u.failed, u.phase = err.Error(), "failed"
+ 		u.mu.Unlock()
++		u.Settled(EventFailed, err.Error())
++		return
+ 	}
++	u.mu.Lock()
++	u.found = found
++	u.mu.Unlock()
+ 
+ 	if found.Version == "" || found.Version == layout.Version || !found.Serves() || !update.Newer(found.Version, layout.Version) {
+ 		slog.Warn("an install was asked for with nothing to install", "running", layout.Version, "offered", found.Version)
+@@ -465,7 +474,7 @@ func (u *Firmware) state(found update.Manifest) esphome.UpdateState {
+ 	return esphome.UpdateState{
+ 		CurrentVersion: layout.Version,
+ 		LatestVersion:  latest,
+-		Title:          "TECHO5 (" + u.Channel().Label() + " channel)",
++		Title:          "Myshka TECHO5 (" + u.Channel().Label() + " channel)",
+ 		ReleaseSummary: found.Notes,
+ 		ReleaseURL:     found.ReleaseURL,
+ 	}
+diff --git a/echod/internal/feature/voice/guarded_announce.go b/echod/internal/feature/voice/guarded_announce.go
+index 48fc96d..35f7511 100644
+--- a/echod/internal/feature/voice/guarded_announce.go
++++ b/echod/internal/feature/voice/guarded_announce.go
+@@ -45,7 +45,7 @@ func (v *Voice) guardedIdlePolicy(duck bool) string {
+ 	if phone.Get().Busy() {
+ 		return "phone_busy"
+ 	}
+-	if v.turn.Busy() || v.turn.guardWatch.Load() {
++	if v.turn.Busy() || v.turn.guardWatch.Load() || micTaken() {
+ 		return "assist_busy"
+ 	}
+ 	if v.turn.sound.Busy() {
+diff --git a/echod/internal/update/channel.go b/echod/internal/update/channel.go
+index 6595388..0a8f9a2 100644
+--- a/echod/internal/update/channel.go
++++ b/echod/internal/update/channel.go
+@@ -6,19 +6,20 @@ package update
+ type Channel int
+ 
+ const (
+-	// Stable is what a device follows unless somebody says otherwise. GitHub's "latest" excludes
+-	// prereleases, so a stable device never sees a dev build.
++	// Stable follows only the explicitly signed Myshka stable feed.
+ 	Stable Channel = iota
+ 
+-	// Dev is the rolling release whose assets are replaced by hand, for a device being worked on.
+-	Dev
++	// Beta is the explicitly selected Myshka prerelease feed.
++	Beta
++	// Dev is kept as a source-level alias; it no longer exposes an upstream feed.
++	Dev = Beta
+ )
+ 
+ // Label is what the setting is called in Home Assistant, and what is stored.
+ func (c Channel) Label() string {
+ 	switch c {
+-	case Dev:
+-		return "dev"
++	case Beta:
++		return "beta"
+ 	}
+ 	return "stable"
+ }
+@@ -34,10 +35,12 @@ func (c Channel) URL() string {
+ 		return ""
+ 	}
+ 	switch c {
+-	case Dev:
+-		return releases + "/download/dev/manifest.json"
++	case Beta:
++		return releases + "/download/myshka-beta/manifest.json"
++	case Stable:
++		return releases + "/download/myshka-stable/manifest.json"
+ 	}
+-	return releases + "/latest/download/manifest.json"
++	return ""
+ }
+ 
+ // Published is whether this build has releases to check at all: a panel's daemon comes inside its
+@@ -45,4 +48,4 @@ func (c Channel) URL() string {
+ func Published() bool { return releases != "" }
+ 
+ // Channels is every channel, in the order Home Assistant should offer them.
+-func Channels() []Channel { return []Channel{Stable, Dev} }
++func Channels() []Channel { return []Channel{Stable, Beta} }
+diff --git a/echod/internal/update/install.go b/echod/internal/update/install.go
+index c3fb2ca..a247d93 100644
+--- a/echod/internal/update/install.go
++++ b/echod/internal/update/install.go
+@@ -55,6 +55,12 @@ func Install(ctx context.Context, m Manifest, progress func(float32), phase func
+ 	if err := notOlder(m.Version, layout.Version); err != nil {
+ 		return err
+ 	}
++	if err := m.ReadyForInstall(m.proofChannel()); err != nil {
++		return err
++	}
++	if arch != "arm-dot" || !slotSystem() {
++		return errors.New("update: Myshka OTA supports only Echo Dot 2 Linux A/B slots")
++	}
+ 
+ 	// A slot install replaces the whole rootfs, so getting into it is the device's reboot. A binary
+ 	// swap only needs this process replaced, which the supervisor does without the device going down.
+diff --git a/echod/internal/update/manifest.go b/echod/internal/update/manifest.go
+index 2ad4f23..d22aa0d 100644
+--- a/echod/internal/update/manifest.go
++++ b/echod/internal/update/manifest.go
+@@ -21,6 +21,13 @@ import (
+ // read — dotted numerals, optionally a prerelease, and any build detail after an underscore, which is
+ // where Home Assistant truncates before comparing.
+ type Manifest struct {
++	Schema       int           `json:"schema,omitempty"`
++	Distribution string        `json:"distribution,omitempty"`
++	Channel      string        `json:"channel,omitempty"`
++	PublishedAt  int64         `json:"published_at,omitempty"`
++	ExpiresAt    int64         `json:"expires_at,omitempty"`
++	proof        *releaseProof // set only after signature + channel validation
++
+ 	// Version is what a device reports as available, and what Home Assistant ranks against what it is
+ 	// running. ValidVersion is that rule, and a manifest breaking it is refused rather than offered.
+ 	Version string `json:"version"`
+@@ -112,7 +119,14 @@ func Fetch(ctx context.Context, c Channel) (Manifest, error) {
+ 	if err := json.Unmarshal(body, &m); err != nil {
+ 		return m, fmt.Errorf("update: reading the manifest at %s: %w", url, err)
+ 	}
+-	return m, m.Valid()
++	if err := m.Valid(); err != nil {
++		return m, err
++	}
++	if err := m.validMyshka(c, time.Now()); err != nil {
++		return m, err
++	}
++	m.proof = &releaseProof{body: append([]byte(nil), body...), signature: append([]byte(nil), sig...), channel: c}
++	return m, nil
+ }
+ 
+ // channelURL is Channel.URL, a variable so a test can serve the channel itself.
+diff --git a/echod/internal/update/myshka.go b/echod/internal/update/myshka.go
+new file mode 100644
+index 0000000..b0a1d2a
+--- /dev/null
++++ b/echod/internal/update/myshka.go
+@@ -0,0 +1,123 @@
++package update
++
++import (
++	"bytes"
++	"encoding/json"
++	"errors"
++	"fmt"
++	"net/url"
++	"regexp"
++	"strings"
++	"time"
++)
++
++const MyshkaDistribution = "myshka-dot2"
++const myshkaRepository = "https://github.com/ha-homelab/ha-techo5-dot"
++const maxManifestLifetime = 366 * 24 * time.Hour
++
++var myshkaVersion = regexp.MustCompile(`^v[0-9]{1,9}\.[0-9]{1,9}\.[0-9]{1,9}(-beta\.[1-9][0-9]{0,8})?_myshka[1-9][0-9]{0,8}$`)
++var assetName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)
++
++type releaseProof struct {
++	body, signature []byte
++	channel         Channel
++}
++
++// validMyshka binds the signed payload to this distribution, channel, lifetime,
++// architecture and immutable repository assets. Only these local A/B images are
++// supported; there is no arbitrary URL, unsigned or stock-channel escape hatch.
++func (m Manifest) validMyshka(channel Channel, now time.Time) error {
++	if channel != Stable && channel != Beta {
++		return errors.New("update: unknown Myshka channel")
++	}
++	if m.Schema != 1 || m.Distribution != MyshkaDistribution || m.Channel != channel.Label() {
++		return errors.New("update: wrong Myshka distribution, schema or channel")
++	}
++	if len(m.Version) > 96 || !myshkaVersion.MatchString(m.Version) || ((channel == Beta) != strings.Contains(m.Version, "-beta.")) {
++		return errors.New("update: version does not belong to the signed Myshka channel")
++	}
++	if _, _, ok := parseVersion(m.Version); !ok {
++		return errors.New("update: unrankable Myshka version")
++	}
++	if m.PublishedAt <= 0 || m.ExpiresAt <= m.PublishedAt || m.ExpiresAt-m.PublishedAt > int64(maxManifestLifetime/time.Second) {
++		return errors.New("update: invalid manifest lifetime")
++	}
++	if m.PublishedAt > now.Add(10*time.Minute).Unix() || m.ExpiresAt <= now.Unix() {
++		return errors.New("update: manifest expired or not yet published")
++	}
++	if m.flat() != (Binary{}) || len(m.Binaries) != 1 || len(m.Rootfs) != 1 || len(m.Assets) != 0 {
++		return errors.New("update: Myshka requires exactly one Dot 2 binary and rootfs")
++	}
++	for _, part := range []struct {
++		kind    string
++		files   map[string]Binary
++		maximum int64
++	}{{"binary", m.Binaries, 64 << 20}, {"rootfs", m.Rootfs, 512 << 20}} {
++		b, ok := part.files["arm-dot"]
++		if !ok {
++			return errors.New("update: release is not for Echo Dot 2 arm-dot")
++		}
++		if err := b.valid(m.Version, "arm-dot"); err != nil {
++			return err
++		}
++		if b.Size > part.maximum {
++			return fmt.Errorf("update: %s exceeds size limit", part.kind)
++		}
++		if err := myshkaAssetURL(b.URL, m.Version); err != nil {
++			return err
++		}
++	}
++	if m.ReleaseURL != myshkaRepository+"/releases/tag/"+m.Version {
++		return errors.New("update: wrong release page")
++	}
++	return nil
++}
++
++func myshkaAssetURL(raw, version string) error {
++	u, err := url.Parse(raw)
++	prefix := "/ha-homelab/ha-techo5-dot/releases/download/" + version + "/"
++	if err != nil || u.Scheme != "https" || u.Host != "github.com" || u.User != nil || u.RawQuery != "" || u.ForceQuery || u.Fragment != "" || u.RawPath != "" || !strings.HasPrefix(u.Path, prefix) || !assetName.MatchString(strings.TrimPrefix(u.Path, prefix)) {
++		return errors.New("update: asset is not an immutable HTTPS release in the Myshka repository")
++	}
++	return nil
++}
++func (m Manifest) proofChannel() Channel {
++	if m.proof == nil {
++		return Channel(-1)
++	}
++	return m.proof.channel
++}
++
++// ReadyForInstall rejects synthetic, changed, expired or cross-channel cached
++// manifests. Fetch retains the signed bytes so every install verifies the key
++// again; a valid JSON object alone never authorizes a root filesystem write.
++func (m Manifest) ReadyForInstall(channel Channel) error {
++	if !clockSet() {
++		return ErrClock
++	}
++	if m.proof == nil || m.proof.channel != channel {
++		return errors.New("update: no signed proof for this channel")
++	}
++	if err := verify(m.proof.body, m.proof.signature, releaseKey); err != nil {
++		return err
++	}
++	var signed Manifest
++	if err := json.Unmarshal(m.proof.body, &signed); err != nil {
++		return err
++	}
++	a, err := json.Marshal(m)
++	if err != nil {
++		return err
++	}
++	b, err := json.Marshal(signed)
++	if err != nil {
++		return err
++	}
++	if !bytes.Equal(a, b) {
++		return errors.New("update: manifest changed after signature verification")
++	}
++	if err := m.Valid(); err != nil {
++		return err
++	}
++	return m.validMyshka(channel, time.Now())
++}
+diff --git a/echod/internal/update/myshka_test.go b/echod/internal/update/myshka_test.go
+new file mode 100644
+index 0000000..210810c
+--- /dev/null
++++ b/echod/internal/update/myshka_test.go
+@@ -0,0 +1,129 @@
++package update
++
++import (
++	"context"
++	"encoding/base64"
++	"encoding/json"
++	"strings"
++	"testing"
++	"time"
++)
++
++func myshkaFixture(c Channel) Manifest {
++	version := "v1.0.44_myshka2"
++	if c == Beta {
++		version = "v1.0.44-beta.202_myshka2"
++	}
++	asset := func(name string) Binary {
++		return Binary{URL: myshkaRepository + "/releases/download/" + version + "/" + name, SHA256: strings.Repeat("a", 64), Size: 4096}
++	}
++	return Manifest{Schema: 1, Distribution: MyshkaDistribution, Channel: c.Label(), Version: version, PublishedAt: time.Now().Add(-time.Hour).Unix(), ExpiresAt: time.Now().Add(180 * 24 * time.Hour).Unix(), Binaries: map[string]Binary{"arm-dot": asset("echod-arm-dot")}, Rootfs: map[string]Binary{"arm-dot": asset("myshka-rootfs-arm-dot.tar.gz")}, ReleaseURL: myshkaRepository + "/releases/tag/" + version}
++}
++func signedMyshka(t *testing.T, c Channel) Manifest {
++	t.Helper()
++	seed, pub := testKey(t)
++	before := releaseKey
++	releaseKey = pub
++	t.Cleanup(func() { releaseKey = before })
++	m := myshkaFixture(c)
++	body, err := json.Marshal(m)
++	if err != nil {
++		t.Fatal(err)
++	}
++	signature, err := Sign(body, seed)
++	if err != nil {
++		t.Fatal(err)
++	}
++	m.proof = &releaseProof{body: body, signature: []byte(signature), channel: c}
++	return m
++}
++func TestMyshkaFixedChannelsAndKey(t *testing.T) {
++	if Stable.URL() != myshkaRepository+"/releases/download/myshka-stable/manifest.json" || Beta.URL() != myshkaRepository+"/releases/download/myshka-beta/manifest.json" {
++		t.Fatal("channel escaped own repository")
++	}
++	if Channel(-1).URL() != "" || Channel(3).URL() != "" {
++		t.Fatal("unknown channel accepted")
++	}
++	if Beta.Label() != "beta" || len(Channels()) != 2 {
++		t.Fatal("wrong channel selection")
++	}
++	raw, err := base64.StdEncoding.DecodeString(releaseKey)
++	if err != nil || len(raw) != 32 {
++		t.Fatal("invalid trust anchor")
++	}
++	if releaseKey != "VE1OZ3bqYzfSexvgIBbi6lGMkZW1VV22jnTTbogJBNw=" {
++		t.Fatal("unexpected production trust anchor")
++	}
++}
++func TestMyshkaManifestScope(t *testing.T) {
++	for _, c := range []Channel{Stable, Beta} {
++		if err := myshkaFixture(c).validMyshka(c, time.Now()); err != nil {
++			t.Fatal(err)
++		}
++	}
++	cases := map[string]func(*Manifest){
++		"distribution": func(m *Manifest) { m.Distribution = "upstream" }, "schema": func(m *Manifest) { m.Schema = 2 }, "cross-channel": func(m *Manifest) { m.Channel = "stable" },
++		"stock-version": func(m *Manifest) { m.Version = "v1.0.44" }, "wrong-stage": func(m *Manifest) { m.Version = "v1.0.44_myshka2" }, "expired": func(m *Manifest) { m.ExpiresAt = time.Now().Add(-time.Minute).Unix() },
++		"future": func(m *Manifest) { m.PublishedAt = time.Now().Add(time.Hour).Unix() }, "long-lived": func(m *Manifest) { m.ExpiresAt = m.PublishedAt + int64(367*24*time.Hour/time.Second) },
++		"no-rootfs": func(m *Manifest) { m.Rootfs = nil }, "wrong-board": func(m *Manifest) { m.Rootfs["arm-donut"] = m.Rootfs["arm-dot"]; delete(m.Rootfs, "arm-dot") },
++		"extra-board": func(m *Manifest) { m.Binaries["arm"] = m.Binaries["arm-dot"] }, "asset-executable": func(m *Manifest) { m.Assets = map[string]Binary{"script": m.Binaries["arm-dot"]} },
++		"missing-hash": func(m *Manifest) { b := m.Rootfs["arm-dot"]; b.SHA256 = ""; m.Rootfs["arm-dot"] = b }, "oversize": func(m *Manifest) { b := m.Rootfs["arm-dot"]; b.Size = 513 << 20; m.Rootfs["arm-dot"] = b },
++		"wrong-release": func(m *Manifest) { m.ReleaseURL = "https://github.com/HuskerMinion/techo5-dot/releases" },
++	}
++	for name, mutate := range cases {
++		t.Run(name, func(t *testing.T) {
++			m := myshkaFixture(Beta)
++			mutate(&m)
++			if err := m.validMyshka(Beta, time.Now()); err == nil {
++				t.Fatal("unsafe manifest accepted")
++			}
++		})
++	}
++}
++func TestMyshkaRejectsAssetURLSubstitution(t *testing.T) {
++	m := myshkaFixture(Beta)
++	good := m.Rootfs["arm-dot"].URL
++	for _, bad := range []string{strings.Replace(good, "https:", "http:", 1), strings.Replace(good, "ha-homelab", "other", 1), strings.Replace(good, m.Version, "latest", 1), good + "?token=x", good + "#x", strings.Replace(good, "github.com", "user@github.com", 1), strings.Replace(good, "github.com", "github.com:443", 1), strings.Replace(good, "myshka-rootfs-arm-dot.tar.gz", "%2e%2e/file", 1), good + "/../other"} {
++		if err := myshkaAssetURL(bad, m.Version); err == nil {
++			t.Errorf("accepted %s", bad)
++		}
++	}
++}
++func TestMyshkaInstallRequiresUnmodifiedSignature(t *testing.T) {
++	m := signedMyshka(t, Beta)
++	if err := m.ReadyForInstall(Beta); err != nil {
++		t.Fatal(err)
++	}
++	if err := m.ReadyForInstall(Stable); err == nil {
++		t.Fatal("cross-channel proof accepted")
++	}
++	m.Notes = "changed"
++	if err := m.ReadyForInstall(Beta); err == nil {
++		t.Fatal("modified signed object accepted")
++	}
++	m = signedMyshka(t, Beta)
++	m.proof.signature[0] ^= 1
++	if err := m.ReadyForInstall(Beta); err == nil {
++		t.Fatal("bad signature accepted")
++	}
++	if err := myshkaFixture(Beta).ReadyForInstall(Beta); err == nil {
++		t.Fatal("unsigned object accepted")
++	}
++}
++func TestMyshkaVersionOrdering(t *testing.T) {
++	cases := [][2]string{{"v1.0.44-beta.201_myshka2", "v1.0.40-myshka.1.beta.1"}, {"v1.0.44-beta.202_myshka2", "v1.0.44-beta.201_myshka2"}, {"v1.0.44_myshka2", "v1.0.44-beta.299_myshka2"}, {"v1.0.45-beta.301_myshka3", "v1.0.44_myshka2"}}
++	for _, pair := range cases {
++		if !Newer(pair[0], pair[1]) || notOlder(pair[1], pair[0]) == nil {
++			t.Fatal("wrong version order", pair)
++		}
++	}
++}
++func TestMyshkaInstallRefusesNonSlotHost(t *testing.T) {
++	if slotSystem() {
++		t.Skip("never run this test on a device")
++	}
++	m := signedMyshka(t, Beta)
++	if err := Install(context.Background(), m, nil, nil); err == nil || !strings.Contains(err.Error(), "only Echo Dot 2 Linux A/B") {
++		t.Fatal("non-slot installation not refused", err)
++	}
++}
+diff --git a/echod/internal/update/releases_dot.go b/echod/internal/update/releases_dot.go
+index e93baa2..595fe66 100644
+--- a/echod/internal/update/releases_dot.go
++++ b/echod/internal/update/releases_dot.go
+@@ -4,4 +4,4 @@ package update
+ 
+ // releases is where the Echo Dot's releases are published: a project of its own, so a Dot release never
+ // becomes the Show's "latest", and the Show's never the Dot's.
+-const releases = "https://github.com/HuskerMinion/techo5-dot/releases"
++const releases = "https://github.com/ha-homelab/ha-techo5-dot/releases"
+diff --git a/echod/internal/update/slots_linux.go b/echod/internal/update/slots_linux.go
+index 26160ba..abf7d10 100644
+--- a/echod/internal/update/slots_linux.go
++++ b/echod/internal/update/slots_linux.go
+@@ -72,6 +72,10 @@ func installRootfs(ctx context.Context, m Manifest, progress func(float32), phas
+ 	if err := download(ctx, b, to, progress); err != nil {
+ 		return err
+ 	}
++	// A slow download must not install a manifest that expired while arriving.
++	if err := m.ReadyForInstall(m.proofChannel()); err != nil {
++		return err
++	}
+ 	slog.Info("update: installing the rootfs into the other slot", "version", m.Version, "file", to)
+ 	// A bar stuck at the end of the download is not what is happening now, and the unpack is the step
+ 	// the device must not lose power in: the display is told so, and told again while it runs, since
+diff --git a/echod/internal/update/trust.go b/echod/internal/update/trust.go
+index 73bf9f0..1446ff4 100644
+--- a/echod/internal/update/trust.go
++++ b/echod/internal/update/trust.go
+@@ -15,7 +15,7 @@ import (
+ // manifest.json into manifest.json.sig). An update installs as root, so a manifest is believed only
+ // when this key signed it: HTTPS alone would let anything that can present a certificate the device
+ // accepts, or a device told to skip certificate checks, hand it a root filesystem.
+-var releaseKey = "KVUuQUbhyKwPBbIneqFEvXYSI+3Hkfu/heCTy5YNVMk="
++var releaseKey = "VE1OZ3bqYzfSexvgIBbi6lGMkZW1VV22jnTTbogJBNw="
+ 
+ // client is the updater's own HTTP client. The diagnostics switch that skips certificate checks
+ // changes http.DefaultTransport for media and models; it never reaches here.
+diff --git a/echod/internal/update/trust_test.go b/echod/internal/update/trust_test.go
+index 3b884b7..abb2d2c 100644
+--- a/echod/internal/update/trust_test.go
++++ b/echod/internal/update/trust_test.go
+@@ -9,7 +9,6 @@ import (
+ 	"errors"
+ 	"net/http"
+ 	"net/http/httptest"
+-	"strings"
+ 	"testing"
+ )
+ 
+@@ -47,9 +46,8 @@ func TestSignatureVerifies(t *testing.T) {
+ // A manifest is taken from the channel only with its signature, and not at all before the clock is set.
+ func TestFetchNeedsTheSignatureAndTheClock(t *testing.T) {
+ 	seed, pub := testKey(t)
+-	body, _ := json.Marshal(Manifest{Version: "9.9.9", Binaries: map[string]Binary{
+-		arch: {URL: "https://example/echod", SHA256: strings.Repeat("a", 64), Size: 1},
+-	}})
++	offered := myshkaFixture(Stable)
++	body, _ := json.Marshal(offered)
+ 	good, _ := Sign(body, seed)
+ 	sig := good
+ 	mux := http.NewServeMux()
+@@ -70,7 +68,7 @@ func TestFetchNeedsTheSignatureAndTheClock(t *testing.T) {
+ 	clockSet = func() bool { return true }
+ 	channelURL = func(Channel) string { return srv.URL + "/manifest.json" }
+ 
+-	if m, err := Fetch(context.Background(), Stable); err != nil || m.Version != "9.9.9" {
++	if m, err := Fetch(context.Background(), Stable); err != nil || m.Version != offered.Version {
+ 		t.Fatalf("a signed manifest: %v, %v", m.Version, err)
+ 	}
+ 	sig = ""
