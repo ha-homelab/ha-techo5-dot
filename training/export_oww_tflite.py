@@ -81,7 +81,6 @@ class Graph:
         op_offsets = []
         for code, inputs, outputs, opt in self.ops:
             oi, oo = vector(inputs), vector(outputs)
-            option_offset, option_type = 0, 0
             if opt:
                 kind, fields = opt
                 fields = dict(fields)
