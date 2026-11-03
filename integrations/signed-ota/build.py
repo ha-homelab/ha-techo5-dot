@@ -10,12 +10,14 @@ import re
 import subprocess
 
 HERE = Path(__file__).resolve().parent
-BASE = "b6a070fc6e62ec0e2636726619003e8c6505c4f8"
+LOCK = json.loads((HERE / "upstream-lock.json").read_text())
+BASE = LOCK["daemon_commit"]
 UPSTREAM = "https://github.com/HuskerMinion/techo5.git"
-VERSION = "v1.0.44-beta.202_myshka2"
+VERSION = f'{LOCK["version"]}-beta.203_myshka2'
+GO_TOOLCHAIN = "go1.27.3"
 PUBLIC_KEY = "VE1OZ3bqYzfSexvgIBbi6lGMkZW1VV22jnTTbogJBNw="
 DISTRIBUTION = "myshka-dot2"
-VERSION_RE = re.compile(r"v1\.0\.44(?:-beta\.[1-9][0-9]{0,8})?_myshka2\Z")
+VERSION_RE = re.compile(re.escape(LOCK["version"]) + r"(?:-beta\.[1-9][0-9]{0,8})?_myshka2\Z")
 
 
 def run(args, cwd=None, env=None):
@@ -25,6 +27,13 @@ def run(args, cwd=None, env=None):
 
 def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def compiler_version(env, cwd=None):
+    version = run(["go", "version"], cwd=cwd, env=env)
+    if not version.startswith(f"go version {GO_TOOLCHAIN} "):
+        raise ValueError(f"The release compiler must be {GO_TOOLCHAIN}; found {version}")
+    return version
 
 
 def prepare(work, cache=None):
@@ -63,7 +72,7 @@ def main():
     cli.add_argument("--prepare-only", action="store_true")
     args = cli.parse_args()
     if not VERSION_RE.fullmatch(args.version):
-        cli.error("version must be v1.0.44-beta.N_myshka2 or v1.0.44_myshka2")
+        cli.error(f'version must be {LOCK["version"]}-beta.N_myshka2 or {LOCK["version"]}_myshka2')
     work, source, guarded, native = prepare(args.work_dir, args.source_cache)
     metadata = {
         "schema": 1, "version": args.version, "distribution": DISTRIBUTION,
@@ -75,19 +84,20 @@ def main():
     }
     if not args.prepare_only:
         env = os.environ.copy()
-        env.update(GOOS="linux", GOARCH="arm", GOARM="7", CGO_ENABLED="0")
+        env.update(GOOS="linux", GOARCH="arm", GOARM="7", CGO_ENABLED="0", GOTOOLCHAIN=GO_TOOLCHAIN)
+        toolchain = compiler_version(env, source / "echod")
         date = run(["git", "show", "-s", "--format=%cI", BASE], cwd=source)
         package = "github.com/HuskerMinion/techo5/echod/internal/layout"
         flags = (f"-s -w -X {package}.Version={args.version} "
                  f"-X {package}.GitCommit={BASE}-myshka-{digest(native)[:12]} "
                  f"-X {package}.BuildDate={date}")
         output = work / "echod-arm-dot"
-        run(["go", "build", "-buildvcs=false", "-trimpath", "-tags", "dot",
+        run(["go", "build", "-mod=readonly", "-buildvcs=false", "-trimpath", "-tags", "dot",
              "-ldflags", flags, "-o", str(output), "./cmd/echod"],
             cwd=source / "echod", env=env)
         metadata.update(stage="compiled", binary_sha256=digest(output),
                         binary_bytes=output.stat().st_size,
-                        go_version=run(["go", "version"]))
+                        go_version=toolchain)
     (work / "build.json").write_text(json.dumps(metadata, indent=2) + "\n")
     print(json.dumps(metadata, indent=2))
 

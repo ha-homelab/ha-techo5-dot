@@ -1,6 +1,6 @@
 # HA · TECHO5 Dot
 
-Signed downstream firmware updates are described in the [Myshka OTA guide](docs/signed-ota.md). The new build line uses the pinned TECHO5 v1.0.44 system, a dedicated signing key and repository channels; it preserves the personal wake model and guarded music ducking.
+The current beta target is **v1.0.49-beta.203_myshka2**, based on the released TECHO5 Dot v1.0.49 system. It retains our signing key, repository channels, personal wake-model support and guarded music ducking. See the [upstream changes and limits](docs/upstream-1.0.49.md) and [Myshka OTA guide](docs/signed-ota.md). Preparing or publishing this beta does not install it on a device.
 
 Experimental development: [guarded one-way announcements](integrations/guarded-announcement/README.md)
 defines request-owned audio delivery with busy refusal, expiry and deduplication.
@@ -17,7 +17,7 @@ This repository maintains a signed downstream Dot 2 firmware distribution, deplo
 
 ## Where we are
 
-Both Dots now run **v1.0.44-beta.202_myshka2**, installed through the native Home Assistant Firmware action from our signed **myshka-beta** channel. The full system uses the pinned upstream v1.0.44 base, including its AirPlay IPv6 fix, and retains guarded announcements, music ducking and the personal wake model. Automatic installation remains off. See the [OTA guide](docs/signed-ota.md), [release](https://github.com/ha-homelab/ha-techo5-dot/releases/tag/v1.0.44-beta.202_myshka2) and dated [acceptance record](docs/status.md).
+The last verified installation on both Dots (October 31) is **v1.0.44-beta.202_myshka2**, installed through the native Home Assistant Firmware action from our signed **myshka-beta** channel. The full system uses the pinned upstream v1.0.44 base, including its AirPlay IPv6 fix, and retains guarded announcements, music ducking and the personal wake model. Automatic installation remains off. See the [OTA guide](docs/signed-ota.md), [release](https://github.com/ha-homelab/ha-techo5-dot/releases/tag/v1.0.44-beta.202_myshka2) and dated [acceptance record](docs/status.md).
 
 The October 28 migration preserved the personal wake model, paired the remaining unit with encrypted ESPHome, updated its dashboard and music routes, and removed its obsolete EchoMuse registrations. End-to-end voice/music tests remain separate; see the dated [status](docs/status.md).
 

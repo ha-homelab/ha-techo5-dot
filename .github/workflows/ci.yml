@@ -142,7 +142,7 @@ jobs:
           python-version: '3.11'
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
         with:
-          go-version: '1.27.1'
+          go-version: '1.27.3'
           cache: false
       - name: Build pinned current base with both downstream patches
         run: python integrations/signed-ota/build.py --work-dir "$RUNNER_TEMP/myshka-ota"
@@ -151,7 +151,11 @@ jobs:
         run: |
           go test -race -tags dot ./internal/update ./internal/feature/firmware
           go test -race ./internal/lib/activitygate ./internal/lib/guardedannounce
+          go test -race ./internal/config
           go test -race -tags dot ./internal/hardware/speaker -run '^(TestGuarded|TestPlaybackProof|TestAnnouncementIdle)'
+          go test -race -tags dot ./internal/feature/media -run '^TestGuardedDuckBypassesTurnPauseWithoutChangingPreference$'
+          go test -race -tags dot ./internal/feature/sendspin -run '^TestGuardedMusicRequiresOwnReadyLocalSource$'
+          go test -race -tags dot ./internal/feature/voice -run '^TestGuardedManagerRemainsReachableAfterJournalFailure$'
 
   gate:
     name: CI gate

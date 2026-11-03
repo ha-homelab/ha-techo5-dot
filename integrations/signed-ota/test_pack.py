@@ -202,6 +202,13 @@ class PackagingTests(unittest.TestCase):
             pack.pack(args)
         self.assertFalse(args.out_dir.exists())
 
+    def test_mislabelled_upstream_base_fails_before_output(self):
+        args = self.fixture()
+        args.release = "v1.0.49-beta.203_myshka2"
+        with patch.object(pack, "HERE", self.root), self.assertRaisesRegex(ValueError, "locked upstream base"):
+            pack.pack(args)
+        self.assertFalse(args.out_dir.exists())
+
     def test_private_source_path_is_refused(self):
         repo, commit = self.git_repo("private-project", {"private/state.json": b"secret"})
         with self.assertRaises(ValueError):

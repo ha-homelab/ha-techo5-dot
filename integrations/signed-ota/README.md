@@ -8,7 +8,7 @@ firmware, flash boot partitions or contact Home Assistant. The separate
 
 ## What is reproduced
 
-`pack.py` derives a rootfs from the exact, signed public TECHO5 v1.0.44 release in
+`pack.py` derives a rootfs from the exact, signed public TECHO5 v1.0.49 release in
 [`upstream-lock.json`](upstream-lock.json). It verifies the upstream manifest's
 Ed25519 signature, its pinned SHA-256, and the rootfs size and SHA-256. The separate
 upstream source bundle is pinned by SHA-256 and size; it is not covered by that
@@ -41,16 +41,20 @@ there are no third-party Python packages.
    `techo5-third-party-sources.tar.gz` into one local input directory. The packager
    performs verification; a file name alone is never trusted.
 2. Keep Git checkouts containing the exact daemon and platform commits in the lock.
-   The daemon is based on `b6a070fc6e62ec0e2636726619003e8c6505c4f8`; the platform is
-   `7f91b238b91956f9da64bbc7ec3c1501ea3e7fe4`.
+   The daemon is based on `52f39926578b6b561e5556fec43f25c231f0eb5a`; the platform is
+   `0c009e4f8baa94437cef933fc803691ff645842e`. The builder reads its source pin and
+   permitted version prefix from the same lock as the packager, preventing
+   drift between the compiled daemon and packaged system.
 3. Run the builder, which applies the guarded-announcement patch and then
-   [`native.patch`](native.patch), and retains a machine-readable `build.json`:
+   [`native.patch`](native.patch), and retains a machine-readable `build.json`.
+   It selects and verifies Go 1.27.3 inside the source module and builds with
+   `-mod=readonly`; it will not silently change dependency locks:
 
    ```sh
    python3 integrations/signed-ota/build.py \
      --work-dir private/myshka-ota-build \
      --source-cache private/upstream-techo5 \
-     --version v1.0.44-beta.202_myshka2
+     --version v1.0.49-beta.203_myshka2
    ```
 
 4. Collect the corresponding sources described below. Do not substitute a list of
@@ -59,9 +63,10 @@ there are no third-party Python packages.
    this commit's two patches match the daemon's build record. Uncommitted patches
    cannot silently become an untraceable public binary.
 
-`v1.0.44-beta.201_myshka2` is the bridge build and
+The current beta is `v1.0.49-beta.203_myshka2`.
+Historically, `v1.0.44-beta.201_myshka2` is the bridge build and
 `v1.0.44-beta.202_myshka2` is the first full OTA target.
-`v1.0.44_myshka2` is the stable version shape. Home Assistant strips the underscore
+`v1.0.49_myshka2` is the stable version shape. Home Assistant strips the underscore
 suffix before comparing versions; the beta counter therefore belongs before it.
 Increment that counter for another beta of the same upstream version. Do not
 reuse a released version or change only the suffix to advertise an update.
@@ -78,10 +83,10 @@ The normal manifest lifetime is 180 days; the native safety limit is 366 days.
 
 ```sh
 python3 integrations/signed-ota/pack.py \
-  --upstream-dir private/upstream-release-v1.0.44 \
+  --upstream-dir private/upstream-release-v1.0.49 \
   --daemon private/myshka-ota-build/echod-arm-dot \
   --build-record private/myshka-ota-build/build.json \
-  --release v1.0.44-beta.202_myshka2 \
+  --release v1.0.49-beta.203_myshka2 \
   --channel beta \
   --published-at "$RELEASE_PUBLISHED_AT" \
   --expires-at "$RELEASE_EXPIRES_AT" \
@@ -95,7 +100,8 @@ python3 integrations/signed-ota/pack.py \
   --source-extra private/alpine-corresponding-sources.tar.gz \
   --source-extra private/bluealsa-corresponding-sources.tar.gz \
   --source-extra private/go-corresponding-sources.tar.gz \
-  --out-dir private/myshka-release-v1.0.44-beta.202_myshka2
+  --source-extra private/rootfs-v1.0.49-source-evidence.tar.gz \
+  --out-dir private/myshka-release-v1.0.49-beta.203_myshka2
 ```
 
 The output directory must not exist. A complete, verified release is staged in a
@@ -165,6 +171,15 @@ license compliance or prove that a manually supplied supplement covers every
 binary. Source coverage review is a release prerequisite, not a claim inferred
 from the presence of a tar file. Retain source attachments for every distributed
 binary release, rather than relying on an unrelated project's future availability.
+
+For v1.0.49, the rootfs comparison found 1,790 of 1,796 entries unchanged from
+v1.0.44, including the Alpine and bluealsa payloads. The changed boot scripts
+match the locked platform source. The additional evidence archive includes the
+exact source of the shipped `btbridge` (built from an earlier shared commit),
+the `wmtup` build identity, and the payload comparisons. The daemon uses freshly
+collected Go dependencies for the locked source. Reuse these prior supplements
+only with that payload evidence; a matching upstream version label alone is
+not sufficient.
 
 ## Verification
 

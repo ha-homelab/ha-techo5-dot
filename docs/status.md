@@ -1,6 +1,23 @@
 # Pilot status
 
 
+## November 2, 2026 — v1.0.49 source update and beta target
+
+The new beta target is **v1.0.49-beta.203_myshka2**, based on TECHO5 Dot
+**v1.0.49** and the shared **v1.6.22** release. It adds the upstream playback
+wake threshold, end-of-speech pause, connection cleanup, runtime diagnostics,
+voice-text privacy control, network-change DHCP renewal and intercom
+noise-floor handling. See the [complete change review](upstream-1.0.49.md) for
+exact pins, unchanged defaults and known upstream limits.
+
+The downstream release retains signed Myshka feeds and guarded announcements;
+personal models and device secrets are not release assets. No new model
+training, physical playback, device installation or HA deployment is claimed
+by this source update. The October 31 record below remains the last verified
+installation on both Dots. Release verification must complete before channel
+promotion; acoustic and per-device installation acceptance remain separate.
+
+
 ## October 31, 2026 — signed Myshka OTA verified on both Dots
 
 Both Echo Dot 2 units now run **v1.0.44-beta.202_myshka2**, installed through
