@@ -1,11 +1,19 @@
 # Myshka signed firmware updates
 
 This distribution targets **Echo Dot 2 / biscuit / RS03QR only**. It combines the
-pinned TECHO5 Dot v1.0.44 system, the guarded-announcement/music-ducking patch,
+pinned TECHO5 Dot v1.0.49 system, the guarded-announcement/music-ducking patch,
 and a downstream update client. It is not an installer for stock Alexa devices,
 Echo Show, full-size Echo, Dot 3, or a different operating system.
 
 ## Why update the base?
+
+The current beta target is **v1.0.49-beta.203_myshka2**. It brings the upstream
+HA reconnection fixes, a separate wake threshold during music, configurable
+end-of-speech pause, more voice diagnostics and DHCP renewal after changing a
+saved Wi-Fi network. Read the [upstream review](upstream-1.0.49.md) for exact
+source pins, defaults, remaining limitations and the distinction between a
+published release and an installed one. Existing personal models and settings
+are retained; this source update does not tune thresholds or retrain a model.
 
 The [original v1.0.44 release](https://github.com/HuskerMinion/techo5-dot/releases/tag/dot-v1.0.44)
 fixes AirPlay from a Mac using temporary IPv6 addresses. Merely replacing the
@@ -51,7 +59,11 @@ publisher keeps immutable release metadata unchanged; it is not a metadata-only
 renewal command. Expiry blocks updates, not normal voice/media operation.
 The signing seed is private; CI does not receive it and cannot sign releases.
 
-## First migration and later updates
+## Historical first migration and later updates
+
+Steps 1–3 record the initial v1.0.44 migration. Devices already on the signed
+Myshka channel use steps 4–6 with the current beta; do not reinstall the old
+bridge or first OTA image to receive later releases.
 
 1. Confirm the existing Dot 2 system, pinned SSH identity, free space, A/B slot
    status and recovery access. Keep a compact private record of configuration

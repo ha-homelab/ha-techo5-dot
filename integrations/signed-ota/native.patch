@@ -1,5 +1,121 @@
+diff --git a/echod/internal/config/guarded_store_test.go b/echod/internal/config/guarded_store_test.go
+new file mode 100644
+index 00000000..5b61802d
+--- /dev/null
++++ b/echod/internal/config/guarded_store_test.go
+@@ -0,0 +1,94 @@
++package config
++
++import (
++	"errors"
++	"path/filepath"
++	"testing"
++	"time"
++
++	"github.com/HuskerMinion/techo5/echod/internal/lib/activitygate"
++)
++
++// Every accepted silence-policy path must preempt the exact guarded owner.
++// These stores and leases use no real device, media, configuration or network.
++func TestCheckedSilencePolicyPreemptsGuardedAnnouncement(t *testing.T) {
++	for _, tc := range []struct {
++		name   string
++		change func(*Config)
++	}{
++		{"do_not_disturb", func(c *Config) { c.Home.DoNotDisturb = !c.Home.DoNotDisturb }},
++		{"quiet_hours", func(c *Config) { c.Speaker.QuietHours = "22:00-07:00" }},
++	} {
++		t.Run(tc.name, func(t *testing.T) {
++			st, err := Load(filepath.Join(t.TempDir(), "state.json"))
++			if err != nil {
++				t.Fatal(err)
++			}
++			lease, reason := activitygate.Device.Reserve(time.Now().Add(time.Minute), func() string { return "" })
++			if lease == nil {
++				t.Fatal(reason)
++			}
++			defer lease.Release()
++			if err := st.UpdateChecked(func(c *Config) error { tc.change(c); return nil }); err != nil {
++				t.Fatal(err)
++			}
++			if lease.Valid() || lease.Reason() != "silence_policy_changed" {
++				t.Fatalf("policy change left announcement running: %q", lease.Reason())
++			}
++		})
++	}
++}
++
++func TestRejectedOrUnrelatedCheckedWriteKeepsGuardedAnnouncement(t *testing.T) {
++	st, err := Load(filepath.Join(t.TempDir(), "state.json"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	before := st.Get().Home.DoNotDisturb
++	lease, reason := activitygate.Device.Reserve(time.Now().Add(time.Minute), func() string { return "" })
++	if lease == nil {
++		t.Fatal(reason)
++	}
++	defer lease.Release()
++	refused := errors.New("refused test change")
++	if err := st.UpdateChecked(func(c *Config) error {
++		c.Home.DoNotDisturb = !before
++		return refused
++	}); !errors.Is(err, refused) {
++		t.Fatal("rejected write did not preserve its error", err)
++	}
++	if !lease.Valid() || st.Get().Home.DoNotDisturb != before {
++		t.Fatal("rejected policy write cancelled the announcement or survived rollback")
++	}
++	if err := st.UpdateChecked(func(c *Config) error { c.Alarms.Skipped = []Skip{{ID: "test", At: time.Now()}}; return nil }); err != nil {
++		t.Fatal(err)
++	}
++	if !lease.Valid() {
++		t.Fatal("unrelated checked change cancelled the announcement")
++	}
++}
++
++func TestFailedCheckedPolicyWriteRestoresSettingsButCancelsAnnouncement(t *testing.T) {
++	path := filepath.Join(t.TempDir(), "state.json")
++	st, err := Load(path)
++	if err != nil {
++		t.Fatal(err)
++	}
++	before := st.Get().Home.DoNotDisturb
++	unblock := failWrites(t, path)
++	defer unblock()
++	lease, reason := activitygate.Device.Reserve(time.Now().Add(time.Minute), func() string { return "" })
++	if lease == nil {
++		t.Fatal(reason)
++	}
++	defer lease.Release()
++	if err := st.UpdateChecked(func(c *Config) error { c.Home.DoNotDisturb = !before; return nil }); err == nil {
++		t.Fatal("failed write reported success")
++	}
++	if st.Get().Home.DoNotDisturb != before {
++		t.Fatal("failed policy write survived rollback")
++	}
++	if lease.Valid() || lease.Reason() != "silence_policy_changed" {
++		t.Fatal("accepted silence request did not conservatively cancel the announcement")
++	}
++}
+diff --git a/echod/internal/config/store.go b/echod/internal/config/store.go
+index 0e76ed4b..23776a8a 100644
+--- a/echod/internal/config/store.go
++++ b/echod/internal/config/store.go
+@@ -206,6 +206,11 @@ func (st *Store) UpdateChecked(f func(*Config) error) error {
+ 		st.c = before
+ 		return err
+ 	}
++	// Checked writes can change the same silence policies as ordinary writes.
++	// Cancel without waiting under the store lock, even if persistence later fails.
++	if st.c.Home.DoNotDisturb != before.Home.DoNotDisturb || st.c.Speaker.QuietHours != before.Speaker.QuietHours {
++		activitygate.Device.Interrupt("silence_policy_changed")
++	}
+ 	err := st.write()
+ 	var renamed afterRename
+ 	switch {
 diff --git a/echod/internal/feature/firmware/firmware.go b/echod/internal/feature/firmware/firmware.go
-index ba0c010..3bebb94 100644
+index ba0c0103..3bebb942 100644
 --- a/echod/internal/feature/firmware/firmware.go
 +++ b/echod/internal/feature/firmware/firmware.go
 @@ -333,17 +333,26 @@ func (u *Firmware) Install(ctx context.Context) {
@@ -46,7 +162,7 @@ index ba0c010..3bebb94 100644
  		ReleaseURL:     found.ReleaseURL,
  	}
 diff --git a/echod/internal/feature/voice/guarded_announce.go b/echod/internal/feature/voice/guarded_announce.go
-index 48fc96d..35f7511 100644
+index 48fc96db..35f75113 100644
 --- a/echod/internal/feature/voice/guarded_announce.go
 +++ b/echod/internal/feature/voice/guarded_announce.go
 @@ -45,7 +45,7 @@ func (v *Voice) guardedIdlePolicy(duck bool) string {
@@ -59,7 +175,7 @@ index 48fc96d..35f7511 100644
  	}
  	if v.turn.sound.Busy() {
 diff --git a/echod/internal/update/channel.go b/echod/internal/update/channel.go
-index 6595388..0a8f9a2 100644
+index 6595388c..0a8f9a2b 100644
 --- a/echod/internal/update/channel.go
 +++ b/echod/internal/update/channel.go
 @@ -6,19 +6,20 @@ package update
@@ -112,7 +228,7 @@ index 6595388..0a8f9a2 100644
 -func Channels() []Channel { return []Channel{Stable, Dev} }
 +func Channels() []Channel { return []Channel{Stable, Beta} }
 diff --git a/echod/internal/update/install.go b/echod/internal/update/install.go
-index c3fb2ca..a247d93 100644
+index c3fb2cad..a247d93a 100644
 --- a/echod/internal/update/install.go
 +++ b/echod/internal/update/install.go
 @@ -55,6 +55,12 @@ func Install(ctx context.Context, m Manifest, progress func(float32), phase func
@@ -129,7 +245,7 @@ index c3fb2ca..a247d93 100644
  	// A slot install replaces the whole rootfs, so getting into it is the device's reboot. A binary
  	// swap only needs this process replaced, which the supervisor does without the device going down.
 diff --git a/echod/internal/update/manifest.go b/echod/internal/update/manifest.go
-index 2ad4f23..d22aa0d 100644
+index 2ad4f239..d22aa0d1 100644
 --- a/echod/internal/update/manifest.go
 +++ b/echod/internal/update/manifest.go
 @@ -21,6 +21,13 @@ import (
@@ -164,7 +280,7 @@ index 2ad4f23..d22aa0d 100644
  // channelURL is Channel.URL, a variable so a test can serve the channel itself.
 diff --git a/echod/internal/update/myshka.go b/echod/internal/update/myshka.go
 new file mode 100644
-index 0000000..b0a1d2a
+index 00000000..b0a1d2af
 --- /dev/null
 +++ b/echod/internal/update/myshka.go
 @@ -0,0 +1,123 @@
@@ -293,7 +409,7 @@ index 0000000..b0a1d2a
 +}
 diff --git a/echod/internal/update/myshka_test.go b/echod/internal/update/myshka_test.go
 new file mode 100644
-index 0000000..210810c
+index 00000000..6bd4f6bf
 --- /dev/null
 +++ b/echod/internal/update/myshka_test.go
 @@ -0,0 +1,129 @@
@@ -410,7 +526,7 @@ index 0000000..210810c
 +	}
 +}
 +func TestMyshkaVersionOrdering(t *testing.T) {
-+	cases := [][2]string{{"v1.0.44-beta.201_myshka2", "v1.0.40-myshka.1.beta.1"}, {"v1.0.44-beta.202_myshka2", "v1.0.44-beta.201_myshka2"}, {"v1.0.44_myshka2", "v1.0.44-beta.299_myshka2"}, {"v1.0.45-beta.301_myshka3", "v1.0.44_myshka2"}}
++	cases := [][2]string{{"v1.0.49-beta.203_myshka2", "v1.0.44-beta.202_myshka2"}, {"v1.0.44-beta.201_myshka2", "v1.0.40-myshka.1.beta.1"}, {"v1.0.44-beta.202_myshka2", "v1.0.44-beta.201_myshka2"}, {"v1.0.44_myshka2", "v1.0.44-beta.299_myshka2"}, {"v1.0.45-beta.301_myshka3", "v1.0.44_myshka2"}}
 +	for _, pair := range cases {
 +		if !Newer(pair[0], pair[1]) || notOlder(pair[1], pair[0]) == nil {
 +			t.Fatal("wrong version order", pair)
@@ -427,7 +543,7 @@ index 0000000..210810c
 +	}
 +}
 diff --git a/echod/internal/update/releases_dot.go b/echod/internal/update/releases_dot.go
-index e93baa2..595fe66 100644
+index e93baa20..595fe66e 100644
 --- a/echod/internal/update/releases_dot.go
 +++ b/echod/internal/update/releases_dot.go
 @@ -4,4 +4,4 @@ package update
@@ -437,10 +553,10 @@ index e93baa2..595fe66 100644
 -const releases = "https://github.com/HuskerMinion/techo5-dot/releases"
 +const releases = "https://github.com/ha-homelab/ha-techo5-dot/releases"
 diff --git a/echod/internal/update/slots_linux.go b/echod/internal/update/slots_linux.go
-index 26160ba..abf7d10 100644
+index 73e326f3..043039a5 100644
 --- a/echod/internal/update/slots_linux.go
 +++ b/echod/internal/update/slots_linux.go
-@@ -72,6 +72,10 @@ func installRootfs(ctx context.Context, m Manifest, progress func(float32), phas
+@@ -73,6 +73,10 @@ func installRootfs(ctx context.Context, m Manifest, progress func(float32), phas
  	if err := download(ctx, b, to, progress); err != nil {
  		return err
  	}
@@ -452,7 +568,7 @@ index 26160ba..abf7d10 100644
  	// A bar stuck at the end of the download is not what is happening now, and the unpack is the step
  	// the device must not lose power in: the display is told so, and told again while it runs, since
 diff --git a/echod/internal/update/trust.go b/echod/internal/update/trust.go
-index 73bf9f0..1446ff4 100644
+index 73bf9f07..1446ff44 100644
 --- a/echod/internal/update/trust.go
 +++ b/echod/internal/update/trust.go
 @@ -15,7 +15,7 @@ import (
@@ -465,7 +581,7 @@ index 73bf9f0..1446ff4 100644
  // client is the updater's own HTTP client. The diagnostics switch that skips certificate checks
  // changes http.DefaultTransport for media and models; it never reaches here.
 diff --git a/echod/internal/update/trust_test.go b/echod/internal/update/trust_test.go
-index 3b884b7..abb2d2c 100644
+index 3b884b7c..abb2d2c4 100644
 --- a/echod/internal/update/trust_test.go
 +++ b/echod/internal/update/trust_test.go
 @@ -9,7 +9,6 @@ import (

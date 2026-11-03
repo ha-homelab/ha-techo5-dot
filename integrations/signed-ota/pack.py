@@ -292,6 +292,8 @@ def pack(args):
     match = VERSION.fullmatch(args.release)
     if not match or ("beta" if "-beta." in args.release else "stable") != args.channel:
         raise ValueError("Release version and channel must agree")
+    if args.release.split("-", 1)[0].split("_", 1)[0] != lock["version"]:
+        raise ValueError("Release version must match the locked upstream base")
     if args.published_at <= 0 or not 0 < args.expires_at - args.published_at <= 366 * 86400:
         raise ValueError("Manifest validity must be positive and at most 366 days")
     decode_key(args.public_key)
@@ -347,7 +349,7 @@ def pack(args):
         source_entries["README.txt"] = Entry(data=(
             "Myshka Dot 2 corresponding-source bundle\n\n"
             "myshka-project.tar contains the committed build, packaging instructions and patches.\n"
-            "Apply its guarded-announcement.patch and signed-ota/native.patch to upstream-daemon.tar.\n"
+            "Apply integrations/guarded-announcement/guarded-announcement.patch, then integrations/signed-ota/native.patch, to upstream-daemon.tar.\n"
             "upstream-platform.tar contains the exact upstream rootfs recipes and package lists.\n"
             "techo5-third-party-sources.tar.gz contains upstream's separately published component sources.\n"
             "supplement-* contains the maintainer-audited additional sources (including Alpine packages).\n"
