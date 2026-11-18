@@ -99,3 +99,4 @@ support-bundles/
 .coverage.*
 coverage.xml
 htmlcov/
+A*S.md
